@@ -9,6 +9,7 @@ import socket
 import sys
 import time
 from typing import Any
+from urllib.parse import unquote
 
 import pywemo
 from mcp.server.fastmcp import FastMCP
@@ -1321,6 +1322,9 @@ async def get_device_resource(device_id: str) -> str:
         JSON string with device info and current state.
 
     """
+    # URL-decode so 'Master%20Bed%20346' becomes 'Master Bed 346'
+    device_id = unquote(device_id)
+
     # 1. Try in-memory cache first
     device = _device_cache.get(device_id)
 
