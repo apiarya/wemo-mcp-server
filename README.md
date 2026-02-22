@@ -120,7 +120,10 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "wemo": {
       "command": "uvx",
-      "args": ["wemo-mcp-server"]
+      "args": ["wemo-mcp-server"],
+      "env": {
+        "WEMO_MCP_DEFAULT_SUBNET": "192.168.1.0/24"
+      }
     }
   }
 }
@@ -138,7 +141,10 @@ Edit `~/.vscode/mcp.json`:
     "wemo": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["wemo-mcp-server"]
+      "args": ["wemo-mcp-server"],
+      "env": {
+        "WEMO_MCP_DEFAULT_SUBNET": "192.168.1.0/24"
+      }
     }
   }
 }
@@ -240,6 +246,18 @@ Reload VS Code after saving.
 The WeMo MCP Server supports flexible configuration through YAML files and environment variables.
 
 ### Quick Configuration
+
+The most important setting is your **network subnet** — the server defaults to `192.168.1.0/24` but your devices may be on a different subnet (e.g. `192.168.86.0/24`).
+
+Set it directly in your MCP client config using `env`:
+
+```json
+"env": {
+  "WEMO_MCP_DEFAULT_SUBNET": "192.168.86.0/24"
+}
+```
+
+Or export it before starting the server:
 
 **Using Environment Variables** (simplest):
 ```bash
