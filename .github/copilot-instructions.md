@@ -180,6 +180,72 @@ python -m build
 pip install -e .
 ```
 
+## Commit Practices
+
+### Pre-Commit Documentation Check ⚠️ REQUIRED
+**Before every commit**, verify if documentation needs updates:
+
+#### Files to Check:
+1. **README.md**
+   - [ ] Are new features documented?
+   - [ ] Are installation instructions still accurate?
+   - [ ] Are example prompts up-to-date?
+   - [ ] Are MCP tool descriptions current?
+
+2. **CHANGELOG.md**
+   - [ ] Is the change documented under appropriate version?
+   - [ ] Are breaking changes clearly marked?
+   - [ ] Is the change categorized correctly (Added/Changed/Fixed/etc.)?
+
+3. **Copilot Instructions** (`.github/copilot-instructions.md`)
+   - [ ] Does code structure match documented structure?
+   - [ ] Are new tools/functions documented?
+   - [ ] Are dependencies list current?
+   - [ ] Are development commands accurate?
+
+4. **Version Files** (if version bump)
+   - [ ] `pyproject.toml` - version field
+   - [ ] `src/wemo_mcp_server/__init__.py` - __version__
+   - [ ] `server.json` - version field
+   - [ ] All three must match exactly!
+
+5. **Tool Docstrings** (in `server.py`)
+   - [ ] Do docstrings match actual behavior?
+   - [ ] Are parameters documented correctly?
+   - [ ] Are return values accurate?
+
+#### Quick Check Command:
+```bash
+# Before committing, ask yourself:
+# "What documentation might be affected by my changes?"
+
+# Then review relevant files:
+git diff README.md
+git diff CHANGELOG.md
+git diff .github/copilot-instructions.md
+git diff server.json pyproject.toml src/wemo_mcp_server/__init__.py
+```
+
+#### Common Documentation Updates:
+- **New MCP Tool** → Update README.md (tools section), copilot-instructions.md
+- **Bug Fix** → Update CHANGELOG.md
+- **New Dependency** → Update README.md, pyproject.toml, copilot-instructions.md
+- **API Change** → Update README.md, tool docstrings, CHANGELOG.md (breaking changes)
+- **Version Bump** → Update 3 version files + CHANGELOG.md
+- **New Feature** → Update README.md, CHANGELOG.md, copilot-instructions.md
+
+#### Documentation Debt
+If you can't update documentation immediately:
+```bash
+# Create a TODO comment in the commit message
+git commit -m "Add feature X
+
+TODO: Update README.md with new feature documentation
+TODO: Add example prompts for feature X"
+```
+
+Then create a GitHub issue to track the documentation update.
+
 ## Publishing & CI/CD
 
 ### Automated Publishing (✅ ACTIVE)
@@ -307,6 +373,7 @@ Test prompts:
 - **Main branch**: Production-ready code
 - **Tags**: Version format `vX.Y.Z` (e.g., `v1.1.1`)
 - **Commits**: Descriptive messages with context
+- **Pre-commit checks**: Always verify documentation needs updates (see Commit Practices section)
 - **No direct commits to main**: Use feature branches for major changes
 
 ## Support & Community
