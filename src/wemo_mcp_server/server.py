@@ -13,6 +13,7 @@ import pywemo
 from mcp.server.fastmcp import FastMCP
 from pydantic import ValidationError
 
+from .cache import _cache_manager, serialize_device
 from .error_handling import build_error_response, retry_on_network_error
 from .models import (
     ControlDeviceParams,
@@ -331,6 +332,15 @@ async def scan_network(
 
         elapsed_time = time.time() - start_time
 
+        # Save device info to persistent cache
+        device_cache_data = {}
+        for device in devices:
+            device_cache_data[device.name] = serialize_device(device)
+            if hasattr(device, "host"):
+                device_cache_data[device.host] = serialize_device(device)
+
+        cache_saved = _cache_manager.save(device_cache_data)
+
         scan_result = {
             "scan_parameters": {
                 "subnet": params.subnet,
@@ -344,10 +354,14 @@ async def scan_network(
             },
             "devices": device_list,
             "scan_completed": True,
+            "cache_saved": cache_saved,
             "timestamp": time.time(),
         }
 
-        logger.info(f"Scan completed in {elapsed_time:.2f}s. Found {len(device_list)} WeMo devices")
+        logger.info(
+            f"Scan completed in {elapsed_time:.2f}s. Found {len(device_list)} WeMo devices. "
+            f"Cache {'saved' if cache_saved else 'save failed'}.",
+        )
         return scan_result
 
     except Exception as e:
@@ -401,6 +415,70 @@ async def list_devices() -> dict[str, Any]:
         error_response = build_error_response(e, "List devices")
         error_response.update({"device_count": 0, "devices": []})
         return error_response
+
+
+@mcp.tool()
+async def get_cache_info() -> dict[str, Any]:
+    """Get information about the persistent device cache.
+
+    Returns information about the cache file including age, expiration status,
+    and device count. Useful for determining if a rescan is needed.
+
+    Returns:
+        Dictionary containing:
+        - exists: Whether cache file exists
+        - path: Path to cache file
+        - age_seconds: Age of cache in seconds
+        - expired: Whether cache has expired
+        - device_count: Number of devices in cache
+        - ttl_seconds: Time-to-live for cache entries
+
+    """
+    try:
+        cache_info = _cache_manager.get_cache_info()
+        cache_info["memory_cache_size"] = len(_device_cache)
+        return cache_info
+    except Exception as e:
+        logger.error(f"Error getting cache info: {e}", exc_info=True)
+        return build_error_response(e, "Get cache info")
+
+
+@mcp.tool()
+async def clear_cache() -> dict[str, Any]:
+    """Clear the persistent device cache.
+
+    Removes the cache file and clears in-memory cache. Useful when devices
+    have changed or cache is corrupted. Run scan_network after clearing
+    to rebuild the cache.
+
+    Returns:
+        Dictionary containing:
+        - success: Whether cache was cleared successfully
+        - message: Descriptive message
+
+    """
+    try:
+        # Clear persistent cache
+        cache_cleared = _cache_manager.clear()
+
+        # Clear in-memory cache
+        _device_cache.clear()
+
+        if cache_cleared:
+            return {
+                "success": True,
+                "message": "Cache cleared successfully. Run scan_network to rebuild cache.",
+                "timestamp": time.time(),
+            }
+        return {
+            "success": False,
+            "error": "Failed to clear cache file",
+            "timestamp": time.time(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error clearing cache: {e}", exc_info=True)
+        return build_error_response(e, "Clear cache")
 
 
 @mcp.tool()
