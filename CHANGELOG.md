@@ -5,6 +5,60 @@ All notable changes to the WeMo MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-21
+
+### 🏆 Repository Restructuring - Production Standards
+
+Major repository reorganization to meet professional open-source standards and improve maintainability.
+
+### Added
+- 🔐 **SECURITY.md** - Comprehensive security policy and vulnerability reporting
+- 🤝 **CONTRIBUTING.md** - Complete contribution guidelines and development workflow
+- 📜 **CODE_OF_CONDUCT.md** - Contributor Covenant v2.1 for community standards
+- 📋 **Issue Templates** - Structured templates for bugs, features, and questions (YAML format)
+- 🔄 **PR Template** - Comprehensive pull request checklist
+- 📚 **docs/** - New documentation directory structure
+- 📖 **docs/PUBLISHING.md** - Consolidated publishing guide (single source of truth)
+- 🗄️ **docs/archive/** - Historical documentation preserved
+
+### Changed
+- 📁 **Repository Structure** - Reorganized for clarity and professionalism
+  - Root level: 14 files → 6 essential files (57% reduction)
+  - Documentation: 3,385 lines → ~2,000 lines (41% reduction)
+  - Consolidated 5 publishing docs into 1 comprehensive guide
+- 📚 **Documentation Organization** - Moved historical docs to archive
+  - MIGRATION.md → docs/archive/
+  - RELEASE_NOTES_v1.1.x → docs/archive/
+  - Publishing automation docs → docs/archive/
+
+### Removed
+- 🗑️ **Redundant Documentation** - Deleted 3 superseded publishing files
+- 🔒 **Security Risk** - Removed MCP Registry token files from disk
+  - .mcpregistry_github_token
+  - .mcpregistry_registry_token
+  - Verified not present in git history
+
+### Security
+- ✅ Token files removed and verified clean from git history
+- ✅ Security policy established with vulnerability reporting process
+- ✅ Pre-commit security checks documented in contribution guidelines
+
+### GitHub Community Standards
+Achieved **6/6** GitHub community standards:
+- ✅ Description
+- ✅ README
+- ✅ Code of Conduct
+- ✅ Contributing Guidelines
+- ✅ License
+- ✅ Security Policy
+
+### Benefits
+- 🎯 **Better Organization** - Clear separation of user docs, developer docs, and historical docs
+- 🤝 **Contributor-Friendly** - Structured issue/PR process with templates and guidelines
+- 🔒 **Enhanced Security** - No sensitive files, clear security practices
+- 📊 **Professional Standards** - Matches industry best practices for open-source projects
+- 🔍 **Better Discoverability** - Improved GitHub search ranking and community standards score
+
 ## [1.1.0] - 2026-02-21
 
 ### 🏠 Repository Migration - New Home!
