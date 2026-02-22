@@ -169,7 +169,8 @@ class TestAsyncFunctions:
         result = await control_device("TestDevice", "invalid_action")
 
         assert "error" in result
-        assert "Invalid action" in result["error"]
+        assert "Invalid parameters" in result["error"]
+        assert "validation_errors" in result
         assert result["success"] is False
 
     async def test_control_device_invalid_brightness(self):
@@ -179,7 +180,8 @@ class TestAsyncFunctions:
         result = await control_device("TestDevice", "brightness", brightness=150)
 
         assert "error" in result
-        assert "Invalid brightness" in result["error"]
+        assert "Invalid parameters" in result["error"]
+        assert "validation_errors" in result
         assert result["success"] is False
 
 
@@ -496,7 +498,8 @@ class TestMCPToolsHappyPath:
 
         assert result["success"] is False
         assert "error" in result
-        assert "empty" in result["error"].lower()
+        assert "Invalid parameters" in result["error"]
+        assert "validation_errors" in result
 
     @pytest.mark.asyncio
     async def test_rename_device_not_found(self):

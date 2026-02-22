@@ -11,6 +11,14 @@ from typing import Any
 
 import pywemo
 from mcp.server.fastmcp import FastMCP
+from pydantic import ValidationError
+
+from .models import (
+    ControlDeviceParams,
+    DeviceIdentifierParam,
+    RenameDeviceParams,
+    ScanNetworkParams,
+)
 
 # Configure logging to stderr for MCP
 logging.basicConfig(
@@ -268,8 +276,8 @@ async def scan_network(
 
     Args:
         subnet: Network subnet in CIDR notation (e.g., "192.168.1.0/24")
-        timeout: Connection timeout in seconds for port probing
-        max_workers: Maximum concurrent workers for network scanning
+        timeout: Connection timeout in seconds for port probing (0.1-5.0)
+        max_workers: Maximum concurrent workers for network scanning (1-200)
 
     Returns:
         Dictionary containing:
@@ -278,18 +286,36 @@ async def scan_network(
         - devices: List of discovered WeMo devices with full details
 
     """
+    # Validate inputs
+    try:
+        params = ScanNetworkParams(subnet=subnet, timeout=timeout, max_workers=max_workers)
+    except ValidationError as e:
+        return {
+            "error": "Invalid parameters",
+            "validation_errors": [
+                {"field": err["loc"][0], "message": err["msg"], "input": err["input"]}
+                for err in e.errors()
+            ],
+            "scan_completed": False,
+        }
+
     start_time = time.time()
 
     try:
-        logger.info(f"Starting WeMo network scan for subnet: {subnet}")
+        logger.info(f"Starting WeMo network scan for subnet: {params.subnet}")
 
         # Create scanner instance
         scanner = WeMoScanner()
-        scanner.timeout = timeout
+        scanner.timeout = params.timeout
 
         # Run the synchronous scan in a thread pool to keep async interface
         loop = asyncio.get_event_loop()
-        devices = await loop.run_in_executor(None, scanner.scan_subnet, subnet, max_workers)
+        devices = await loop.run_in_executor(
+            None,
+            scanner.scan_subnet,
+            params.subnet,
+            params.max_workers,
+        )
 
         # Extract device information
         device_list = []
@@ -305,7 +331,11 @@ async def scan_network(
         elapsed_time = time.time() - start_time
 
         scan_result = {
-            "scan_parameters": {"subnet": subnet, "timeout": timeout, "max_workers": max_workers},
+            "scan_parameters": {
+                "subnet": params.subnet,
+                "timeout": params.timeout,
+                "max_workers": params.max_workers,
+            },
             "results": {
                 "total_devices_found": len(device_list),
                 "wemo_devices": len(device_list),
@@ -322,7 +352,11 @@ async def scan_network(
     except Exception as e:
         error_result = {
             "error": f"Network scan failed: {e!s}",
-            "scan_parameters": {"subnet": subnet, "timeout": timeout, "max_workers": max_workers},
+            "scan_parameters": {
+                "subnet": params.subnet,
+                "timeout": params.timeout,
+                "max_workers": params.max_workers,
+            },
             "scan_completed": False,
             "timestamp": time.time(),
         }
@@ -383,13 +417,25 @@ async def get_device_status(device_identifier: str) -> dict[str, Any]:
         - Additional device information
 
     """
+    # Validate input
+    try:
+        param = DeviceIdentifierParam(device_identifier=device_identifier)
+    except ValidationError as e:
+        return {
+            "error": "Invalid parameters",
+            "validation_errors": [
+                {"field": err["loc"][0], "message": err["msg"], "input": err["input"]}
+                for err in e.errors()
+            ],
+        }
+
     try:
         # Try to find device in cache
-        device = _device_cache.get(device_identifier)
+        device = _device_cache.get(param.device_identifier)
 
         if not device:
             return {
-                "error": f"Device '{device_identifier}' not found in cache",
+                "error": f"Device '{param.device_identifier}' not found in cache",
                 "suggestion": "Run scan_network first to discover devices",
                 "available_devices": [
                     k
@@ -557,23 +603,29 @@ async def control_device(
         - brightness: Current brightness level (for dimmers)
 
     """
+    # Validate inputs
     try:
-        # Validate inputs
-        action = action.lower()
+        params = ControlDeviceParams(
+            device_identifier=device_identifier,
+            action=action,
+            brightness=brightness,
+        )
+    except ValidationError as e:
+        return {
+            "error": "Invalid parameters",
+            "validation_errors": [
+                {"field": err["loc"][0], "message": err["msg"], "input": err["input"]}
+                for err in e.errors()
+            ],
+            "success": False,
+        }
 
-        error = _validate_action(action)
-        if error:
-            return error
-
-        error = _validate_brightness(brightness)
-        if error:
-            return error
-
+    try:
         # Find device in cache
-        device = _device_cache.get(device_identifier)
+        device = _device_cache.get(params.device_identifier)
         if not device:
             return {
-                "error": f"Device '{device_identifier}' not found in cache",
+                "error": f"Device '{params.device_identifier}' not found in cache",
                 "suggestion": "Run scan_network first to discover devices",
                 "available_devices": [
                     k
@@ -587,30 +639,30 @@ async def control_device(
         is_dimmer = hasattr(device, "set_brightness") and hasattr(device, "get_brightness")
 
         # Validate brightness action for non-dimmers
-        if action == "brightness":
+        if params.action == "brightness":
             if not is_dimmer:
                 return {
                     "error": f"Device '{device.name}' is not a dimmer and does not support brightness control",
                     "device_type": type(device).__name__,
                     "success": False,
                 }
-            if brightness is None:
+            if params.brightness is None:
                 return {
                     "error": "Brightness value is required when action is 'brightness'",
                     "success": False,
                 }
 
         # Perform the action
-        await _perform_device_action(device, action, brightness, is_dimmer)
+        await _perform_device_action(device, params.action, params.brightness, is_dimmer)
 
         # Wait for device to respond
         await asyncio.sleep(0.5)
 
         # Build and return result
-        result = await _build_control_result(device, action, is_dimmer)
+        result = await _build_control_result(device, params.action, is_dimmer)
 
         logger.info(
-            f"Device '{device.name}' {action} successful. New state: {result['new_state']}"
+            f"Device '{device.name}' {params.action} successful. New state: {result['new_state']}"
             + (f" Brightness: {result.get('brightness')}" if is_dimmer else ""),
         )
         return result
@@ -648,19 +700,29 @@ async def rename_device(device_identifier: str, new_name: str) -> dict[str, Any]
         - device_ip: IP address of the device
 
     """
+    # Validate inputs
     try:
-        # Validate new name
-        if not new_name or not new_name.strip():
-            return {"error": "New name cannot be empty", "success": False}
+        params = RenameDeviceParams(
+            device_identifier=device_identifier,
+            new_name=new_name,
+        )
+    except ValidationError as e:
+        return {
+            "error": "Invalid parameters",
+            "validation_errors": [
+                {"field": err["loc"][0], "message": err["msg"], "input": err["input"]}
+                for err in e.errors()
+            ],
+            "success": False,
+        }
 
-        new_name = new_name.strip()
-
+    try:
         # Try to find device in cache
-        device = _device_cache.get(device_identifier)
+        device = _device_cache.get(params.device_identifier)
 
         if not device:
             return {
-                "error": f"Device '{device_identifier}' not found in cache",
+                "error": f"Device '{params.device_identifier}' not found in cache",
                 "suggestion": "Run scan_network first to discover devices",
                 "available_devices": [
                     k
@@ -679,9 +741,9 @@ async def rename_device(device_identifier: str, new_name: str) -> dict[str, Any]
         # Try both methods for compatibility with different pywemo versions
         def rename_operation():
             if hasattr(device, "change_friendly_name"):
-                device.change_friendly_name(new_name)
+                device.change_friendly_name(params.new_name)
             elif hasattr(device, "basicevent"):
-                device.basicevent.ChangeFriendlyName(FriendlyName=new_name)
+                device.basicevent.ChangeFriendlyName(FriendlyName=params.new_name)
             else:
                 raise AttributeError("Device does not support renaming")
 
@@ -693,7 +755,7 @@ async def rename_device(device_identifier: str, new_name: str) -> dict[str, Any]
         # Update the cache with the new name
         # Remove old name entry and add new one
         _device_cache.pop(old_name, None)
-        _device_cache[new_name] = device
+        _device_cache[params.new_name] = device
 
         # Also update IP-based cache entry if it exists
         if device_ip in _device_cache:
@@ -702,13 +764,13 @@ async def rename_device(device_identifier: str, new_name: str) -> dict[str, Any]
         result = {
             "success": True,
             "old_name": old_name,
-            "new_name": new_name,
+            "new_name": params.new_name,
             "device_ip": device_ip,
-            "message": f"Device renamed from '{old_name}' to '{new_name}'",
+            "message": f"Device renamed from '{old_name}' to '{params.new_name}'",
             "timestamp": time.time(),
         }
 
-        logger.info(f"Device renamed: '{old_name}' -> '{new_name}' at {device_ip}")
+        logger.info(f"Device renamed: '{old_name}' -> '{params.new_name}' at {device_ip}")
         return result
 
     except Exception as e:
@@ -743,13 +805,26 @@ async def get_homekit_code(device_identifier: str) -> dict[str, Any]:
         - device_ip: IP address of the device
 
     """
+    # Validate input
+    try:
+        param = DeviceIdentifierParam(device_identifier=device_identifier)
+    except ValidationError as e:
+        return {
+            "error": "Invalid parameters",
+            "validation_errors": [
+                {"field": err["loc"][0], "message": err["msg"], "input": err["input"]}
+                for err in e.errors()
+            ],
+            "success": False,
+        }
+
     try:
         # Try to find device in cache
-        device = _device_cache.get(device_identifier)
+        device = _device_cache.get(param.device_identifier)
 
         if not device:
             return {
-                "error": f"Device '{device_identifier}' not found in cache",
+                "error": f"Device '{param.device_identifier}' not found in cache",
                 "suggestion": "Run scan_network first to discover devices",
                 "available_devices": [
                     k
