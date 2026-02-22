@@ -38,6 +38,71 @@ mcp = FastMCP("wemo-mcp-server")
 _device_cache: dict[str, Any] = {}  # key: device name or IP, value: pywemo device object
 
 
+async def _reconnect_device_from_cache(identifier: str) -> Any | None:
+    """Try to reconnect to a device using its cached IP address.
+
+    When the in-memory cache is empty (e.g. after server restart), this looks up
+    the device in the persistent JSON cache and re-establishes a live pywemo
+    connection using the stored host/port.
+
+    Args:
+        identifier: Device name or IP address
+
+    Returns:
+        pywemo device object if reconnected successfully, None otherwise
+
+    """
+    try:
+        cached_devices = _cache_manager.load()
+        if not cached_devices:
+            return None
+
+        # Look up by exact identifier first, then case-insensitive name match
+        device_info = cached_devices.get(identifier)
+        if not device_info or not isinstance(device_info, dict):
+            lower_id = identifier.lower()
+            for data in cached_devices.values():
+                if isinstance(data, dict) and data.get("name", "").lower() == lower_id:
+                    device_info = data
+                    break
+
+        if not device_info or not isinstance(device_info, dict):
+            return None
+
+        host = device_info.get("host")
+        port = device_info.get("port")
+        if not host or host == "unknown":
+            return None
+
+        ports_to_try = [port] if port else [49152, 49153, 49154, 49155]
+
+        def try_reconnect() -> Any | None:
+            for p in ports_to_try:
+                try:
+                    url = f"http://{host}:{p}/setup.xml"
+                    dev = pywemo.discovery.device_from_description(url)
+                    if dev:
+                        logger.info(f"Reconnected to {dev.name} at {host}:{p} from file cache")
+                        return dev
+                except Exception:
+                    pass
+            return None
+
+        loop = asyncio.get_event_loop()
+        device = await loop.run_in_executor(None, try_reconnect)
+
+        if device:
+            _device_cache[device.name] = device
+            if hasattr(device, "host"):
+                _device_cache[device.host] = device
+
+        return device
+
+    except Exception as e:
+        logger.warning(f"Failed to reconnect device '{identifier}' from file cache: {e}")
+        return None
+
+
 # ==============================================================================
 #  WeMo Device Scanner (using pywemo)
 # ==============================================================================
@@ -405,8 +470,8 @@ async def list_devices() -> dict[str, Any]:
 
     """
     try:
-        # Get unique devices (device cache may have duplicates by name and IP)
-        unique_devices = {}
+        # Get unique devices from in-memory cache (device cache may have duplicates by name and IP)
+        unique_devices: dict[str, dict[str, Any]] = {}
         for key, device in _device_cache.items():
             device_name = device.name
             if device_name not in unique_devices:
@@ -415,13 +480,37 @@ async def list_devices() -> dict[str, Any]:
                     "ip_address": getattr(device, "host", "unknown"),
                     "model": getattr(device, "model", "Unknown"),
                     "type": type(device).__name__,
+                    "source": "memory",
                 }
 
-        return {
+        # If in-memory cache is empty, fall back to persistent JSON cache
+        if not unique_devices:
+            cached_data = _cache_manager.load()
+            if cached_data:
+                for _key, info in cached_data.items():
+                    if not isinstance(info, dict):
+                        continue
+                    name = info.get("name", _key)
+                    if name not in unique_devices:
+                        unique_devices[name] = {
+                            "name": name,
+                            "ip_address": info.get("host", "unknown"),
+                            "model": info.get("model_name") or info.get("model", "Unknown"),
+                            "type": info.get("device_type", "Unknown"),
+                            "source": "file_cache",
+                        }
+
+        result: dict[str, Any] = {
             "device_count": len(unique_devices),
             "devices": list(unique_devices.values()),
             "cache_keys": len(_device_cache),
         }
+        if unique_devices and all(d.get("source") == "file_cache" for d in unique_devices.values()):
+            result["note"] = (
+                "Devices loaded from persistent cache file (server was restarted). "
+                "Control commands will automatically reconnect to devices as needed."
+            )
+        return result
     except Exception as e:
         logger.error(f"Error listing devices: {e}", exc_info=True)
         error_response = build_error_response(e, "List devices")
@@ -557,8 +646,10 @@ async def get_device_status(device_identifier: str) -> dict[str, Any]:
         }
 
     try:
-        # Try to find device in cache
+        # Try to find device in memory cache, then reconnect from file cache if needed
         device = _device_cache.get(param.device_identifier)
+        if not device:
+            device = await _reconnect_device_from_cache(param.device_identifier)
 
         if not device:
             return {
@@ -826,8 +917,11 @@ async def control_device(
         }
 
     try:
-        # Find device in cache
+        # Find device in memory cache, then reconnect from file cache if needed
         device = _device_cache.get(params.device_identifier)
+        if not device:
+            device = await _reconnect_device_from_cache(params.device_identifier)
+
         if not device:
             return {
                 "error": f"Device '{params.device_identifier}' not found in cache",
@@ -924,8 +1018,10 @@ async def rename_device(device_identifier: str, new_name: str) -> dict[str, Any]
         }
 
     try:
-        # Try to find device in cache
+        # Try to find device in memory cache, then reconnect from file cache if needed
         device = _device_cache.get(params.device_identifier)
+        if not device:
+            device = await _reconnect_device_from_cache(params.device_identifier)
 
         if not device:
             return {
@@ -1028,8 +1124,10 @@ async def get_homekit_code(device_identifier: str) -> dict[str, Any]:
         }
 
     try:
-        # Try to find device in cache
+        # Try to find device in memory cache, then reconnect from file cache if needed
         device = _device_cache.get(param.device_identifier)
+        if not device:
+            device = await _reconnect_device_from_cache(param.device_identifier)
 
         if not device:
             return {
