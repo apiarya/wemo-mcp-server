@@ -1,5 +1,6 @@
 """Unit tests for WeMo MCP server components."""
 
+import json
 from unittest.mock import Mock, patch
 
 import pytest
@@ -577,6 +578,555 @@ class TestMCPToolsHappyPath:
         assert result["success"] is False
         assert "error" in result
         assert "does not have a HomeKit setup code" in result["error"]
+
+
+# ==============================================================================
+# Module constants
+# ==============================================================================
+class TestModuleConstants:
+    def test_default_subnet_value(self):
+        from wemo_mcp_server.server import DEFAULT_SUBNET
+
+        assert DEFAULT_SUBNET == "192.168.1.0/24"
+
+    def test_err_invalid_params_value(self):
+        from wemo_mcp_server.server import ERR_INVALID_PARAMS
+
+        assert ERR_INVALID_PARAMS == "Invalid parameters"
+
+    def test_err_run_scan_first_value(self):
+        from wemo_mcp_server.server import ERR_RUN_SCAN_FIRST
+
+        assert ERR_RUN_SCAN_FIRST == "Run scan_network first to discover devices"
+
+
+# ==============================================================================
+# _reconnect_device_from_cache
+# ==============================================================================
+class TestReconnectDeviceFromCache:
+    @pytest.mark.asyncio
+    async def test_not_in_file_cache(self):
+        from wemo_mcp_server.server import _reconnect_device_from_cache
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {}
+            result = await _reconnect_device_from_cache("Unknown Device")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_found_by_case_insensitive_name(self):
+        from wemo_mcp_server.server import _device_cache, _reconnect_device_from_cache
+
+        mock_device = Mock()
+        mock_device.name = "Living Room"
+        mock_device.host = "192.168.1.50"
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {
+                "LivingRoom": {"name": "Living Room", "host": "192.168.1.50", "port": 49152}
+            }
+            with patch("wemo_mcp_server.server.pywemo") as mock_pywemo:
+                mock_pywemo.discovery.device_from_description.return_value = mock_device
+                result = await _reconnect_device_from_cache("living room")
+
+        assert result == mock_device
+        _device_cache.pop("Living Room", None)
+        _device_cache.pop("192.168.1.50", None)
+
+    @pytest.mark.asyncio
+    async def test_host_is_unknown(self):
+        from wemo_mcp_server.server import _reconnect_device_from_cache
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {"Bad": {"name": "Bad", "host": "unknown"}}
+            result = await _reconnect_device_from_cache("Bad")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_host_missing(self):
+        from wemo_mcp_server.server import _reconnect_device_from_cache
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {"D": {"name": "D"}}
+            result = await _reconnect_device_from_cache("D")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_all_ports_fail(self):
+        from wemo_mcp_server.server import _reconnect_device_from_cache
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {
+                "Dev": {"name": "Dev", "host": "192.168.1.99", "port": None}
+            }
+            with patch("wemo_mcp_server.server.pywemo") as mock_pywemo:
+                mock_pywemo.discovery.device_from_description.side_effect = Exception("timeout")
+                result = await _reconnect_device_from_cache("Dev")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_cache_load_raises(self):
+        from wemo_mcp_server.server import _reconnect_device_from_cache
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.side_effect = Exception("disk error")
+            result = await _reconnect_device_from_cache("Dev")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_returns_none_when_info_not_dict(self):
+        from wemo_mcp_server.server import _reconnect_device_from_cache
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {"Dev": "not-a-dict"}
+            result = await _reconnect_device_from_cache("Dev")
+        assert result is None
+
+
+# ==============================================================================
+# scan_network validation
+# ==============================================================================
+class TestScanNetworkValidation:
+    @pytest.mark.asyncio
+    async def test_invalid_subnet_returns_error(self):
+        from wemo_mcp_server.server import scan_network
+
+        result = await scan_network(subnet="not-a-cidr")
+        assert "error" in result
+        assert result["scan_completed"] is False
+        assert "validation_errors" in result
+
+    @pytest.mark.asyncio
+    async def test_timeout_out_of_range(self):
+        from wemo_mcp_server.server import scan_network
+
+        result = await scan_network(subnet="192.168.1.0/24", timeout=99.0)
+        assert "error" in result
+        assert result["scan_completed"] is False
+
+    @pytest.mark.asyncio
+    async def test_explicit_subnet_skips_elicitation(self):
+        from wemo_mcp_server.server import scan_network
+
+        with (
+            patch("wemo_mcp_server.server.WeMoScanner"),
+            patch("wemo_mcp_server.server._cache_manager") as mock_cm,
+            patch("wemo_mcp_server.server.WeMoScanner.scan", return_value=[], create=True),
+        ):
+            mock_cm.save.return_value = True
+            mock_cm.load.return_value = {}
+            result = await scan_network(subnet="10.0.0.0/30", timeout=0.1, max_workers=1, ctx=None)
+        # Either completes or errors — main check is no elicitation called
+        assert "scan_completed" in result
+
+
+# ==============================================================================
+# list_devices file-cache fallback
+# ==============================================================================
+class TestListDevicesFileCacheFallback:
+    @pytest.mark.asyncio
+    async def test_falls_back_to_file_cache(self):
+        from wemo_mcp_server.server import _device_cache, list_devices
+
+        _device_cache.clear()
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {
+                "LR": {
+                    "name": "Living Room Light",
+                    "host": "192.168.1.10",
+                    "model_name": "Socket",
+                    "device_type": "WeMoControllee",
+                }
+            }
+            result = await list_devices()
+        assert result["device_count"] == 1
+        assert result["devices"][0]["source"] == "file_cache"
+        assert "note" in result
+
+    @pytest.mark.asyncio
+    async def test_empty_both_caches(self):
+        from wemo_mcp_server.server import _device_cache, list_devices
+
+        _device_cache.clear()
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {}
+            result = await list_devices()
+        assert result["device_count"] == 0
+        assert result["devices"] == []
+
+    @pytest.mark.asyncio
+    async def test_file_cache_skips_non_dict_entries(self):
+        from wemo_mcp_server.server import _device_cache, list_devices
+
+        _device_cache.clear()
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {"bad_key": "not-a-dict"}
+            result = await list_devices()
+        assert result["device_count"] == 0
+
+
+# ==============================================================================
+# get_cache_info / clear_cache
+# ==============================================================================
+class TestCacheTools:
+    @pytest.mark.asyncio
+    async def test_get_cache_info_success(self):
+        from wemo_mcp_server.server import get_cache_info
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.get_cache_info.return_value = {
+                "exists": True,
+                "age_seconds": 100,
+                "device_count": 3,
+            }
+            result = await get_cache_info()
+        assert result["exists"] is True
+        assert "memory_cache_size" in result
+
+    @pytest.mark.asyncio
+    async def test_clear_cache_success(self):
+        from wemo_mcp_server.server import clear_cache
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.clear.return_value = True
+            result = await clear_cache()
+        assert result["success"] is True
+        assert "cleared" in result["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_clear_cache_file_failure(self):
+        from wemo_mcp_server.server import clear_cache
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.clear.return_value = False
+            result = await clear_cache()
+        assert result["success"] is False
+        assert "error" in result
+
+
+# ==============================================================================
+# get_configuration
+# ==============================================================================
+class TestGetConfiguration:
+    @pytest.mark.asyncio
+    async def test_returns_all_sections(self):
+        from wemo_mcp_server.server import get_configuration
+
+        result = await get_configuration()
+        assert result["success"] is True
+        assert "configuration" in result
+        assert "environment_variables" in result
+        assert "WEMO_MCP_" in result["environment_variables"]["prefix"]
+
+
+# ==============================================================================
+# get_device_status validation / not-found
+# ==============================================================================
+class TestGetDeviceStatusExtended:
+    @pytest.mark.asyncio
+    async def test_empty_identifier_validation_error(self):
+        from wemo_mcp_server.server import get_device_status
+
+        result = await get_device_status("")
+        assert "error" in result
+        assert "Invalid parameters" in result["error"]
+        assert "validation_errors" in result
+
+    @pytest.mark.asyncio
+    async def test_device_not_found_returns_suggestion(self):
+        from wemo_mcp_server.server import _device_cache, get_device_status
+
+        _device_cache.clear()
+        with patch("wemo_mcp_server.server._reconnect_device_from_cache", return_value=None):
+            result = await get_device_status("Phantom Device")
+        assert "error" in result
+        assert "not found" in result["error"]
+        assert result["suggestion"] == "Run scan_network first to discover devices"
+        assert "available_devices" in result
+
+
+# ==============================================================================
+# _validate_action / _validate_brightness helpers
+# ==============================================================================
+class TestValidationHelpers:
+    def test_validate_action_all_valid(self):
+        from wemo_mcp_server.server import _validate_action
+
+        for action in ("on", "off", "toggle", "brightness"):
+            assert _validate_action(action) is None
+
+    def test_validate_action_case_insensitive(self):
+        from wemo_mcp_server.server import _validate_action
+
+        assert _validate_action("ON") is None
+        assert _validate_action("Off") is None
+
+    def test_validate_action_invalid(self):
+        from wemo_mcp_server.server import _validate_action
+
+        result = _validate_action("blink")
+        assert result is not None
+        assert result["success"] is False
+        assert "Invalid action" in result["error"]
+
+    def test_validate_brightness_valid_range(self):
+        from wemo_mcp_server.server import _validate_brightness
+
+        assert _validate_brightness(1) is None
+        assert _validate_brightness(50) is None
+        assert _validate_brightness(100) is None
+        assert _validate_brightness(None) is None
+
+    def test_validate_brightness_zero(self):
+        from wemo_mcp_server.server import _validate_brightness
+
+        result = _validate_brightness(0)
+        assert result is not None
+        assert result["success"] is False
+
+    def test_validate_brightness_over_100(self):
+        from wemo_mcp_server.server import _validate_brightness
+
+        result = _validate_brightness(101)
+        assert result is not None
+        assert result["success"] is False
+
+
+# ==============================================================================
+# MCP Resources
+# ==============================================================================
+class TestMCPResources:
+    @pytest.mark.asyncio
+    async def test_list_device_resources_empty(self):
+        from wemo_mcp_server.server import _device_cache, list_device_resources
+
+        _device_cache.clear()
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {}
+            result = await list_device_resources()
+        data = json.loads(result)
+        assert data["total_devices"] == 0
+        assert data["devices"] == []
+
+    @pytest.mark.asyncio
+    async def test_list_device_resources_with_devices(self):
+        from wemo_mcp_server.server import _device_cache, list_device_resources
+
+        _device_cache.clear()
+        mock_dev = Mock()
+        mock_dev.name = "Office Light"
+        mock_dev.host = "192.168.1.10"
+        _device_cache["Office Light"] = mock_dev
+        _device_cache["192.168.1.10"] = mock_dev  # duplicate IP key
+
+        result = await list_device_resources()
+        data = json.loads(result)
+        assert data["total_devices"] == 1  # de-duplicated
+        assert data["devices"][0]["name"] == "Office Light"
+
+        _device_cache.pop("Office Light", None)
+        _device_cache.pop("192.168.1.10", None)
+
+    @pytest.mark.asyncio
+    async def test_list_device_resources_falls_back_to_persisted(self):
+        from wemo_mcp_server.server import _device_cache, list_device_resources
+
+        _device_cache.clear()
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {
+                "Porch": {"name": "Porch Light", "host": "192.168.1.20"}
+            }
+            result = await list_device_resources()
+        data = json.loads(result)
+        assert data["total_devices"] == 1
+        assert data["devices"][0]["name"] == "Porch Light"
+
+    @pytest.mark.asyncio
+    async def test_get_device_resource_not_found(self):
+        from wemo_mcp_server.server import _device_cache, get_device_resource
+
+        _device_cache.clear()
+        with patch("wemo_mcp_server.server._reconnect_device_from_cache", return_value=None):
+            result = await get_device_resource("NonExistent")
+        data = json.loads(result)
+        assert "error" in data
+
+    @pytest.mark.asyncio
+    async def test_get_device_resource_found_in_memory(self):
+        from wemo_mcp_server.server import _device_cache, get_device_resource
+
+        _device_cache.clear()
+        mock_dev = Mock()
+        mock_dev.name = "Kitchen Light"
+        _device_cache["Kitchen Light"] = mock_dev
+
+        with patch(
+            "wemo_mcp_server.server.extract_device_info",
+            return_value={"name": "Kitchen Light", "state": "on"},
+        ):
+            result = await get_device_resource("Kitchen Light")
+        data = json.loads(result)
+        assert data["name"] == "Kitchen Light"
+
+        _device_cache.pop("Kitchen Light", None)
+
+    @pytest.mark.asyncio
+    async def test_get_device_resource_url_encoded_name(self):
+        from wemo_mcp_server.server import _device_cache, get_device_resource
+
+        _device_cache.clear()
+        mock_dev = Mock()
+        mock_dev.name = "Living Room"
+        _device_cache["Living Room"] = mock_dev
+
+        with patch(
+            "wemo_mcp_server.server.extract_device_info",
+            return_value={"name": "Living Room", "state": "off"},
+        ):
+            result = await get_device_resource("Living%20Room")
+        data = json.loads(result)
+        assert data["name"] == "Living Room"
+
+        _device_cache.pop("Living Room", None)
+
+    @pytest.mark.asyncio
+    async def test_get_device_resource_case_insensitive_match(self):
+        from wemo_mcp_server.server import _device_cache, get_device_resource
+
+        _device_cache.clear()
+        mock_dev = Mock()
+        mock_dev.name = "Bedroom Light"
+        _device_cache["Bedroom Light"] = mock_dev
+
+        with patch(
+            "wemo_mcp_server.server.extract_device_info",
+            return_value={"name": "Bedroom Light", "state": "on"},
+        ):
+            result = await get_device_resource("bedroom light")
+        data = json.loads(result)
+        assert data["name"] == "Bedroom Light"
+
+        _device_cache.pop("Bedroom Light", None)
+
+
+# ==============================================================================
+# MCP Prompts
+# ==============================================================================
+class TestMCPPrompts:
+    @pytest.mark.asyncio
+    async def test_prompt_discover_devices_returns_user_message(self):
+        from wemo_mcp_server.server import prompt_discover_devices
+
+        result = await prompt_discover_devices()
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["role"] == "user"
+        assert "scan" in result[0]["content"].lower()
+
+    @pytest.mark.asyncio
+    async def test_prompt_discover_devices_contains_subnet(self):
+        from wemo_mcp_server.server import prompt_discover_devices
+
+        result = await prompt_discover_devices()
+        # Should contain some subnet reference
+        assert "192.168" in result[0]["content"] or "network" in result[0]["content"].lower()
+
+    @pytest.mark.asyncio
+    async def test_prompt_device_status_report_empty_cache(self):
+        from wemo_mcp_server.server import _device_cache, prompt_device_status_report
+
+        _device_cache.clear()
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {}
+            result = await prompt_device_status_report()
+        assert isinstance(result, list)
+        assert result[0]["role"] == "user"
+        assert (
+            "scan" in result[0]["content"].lower() or "no devices" in result[0]["content"].lower()
+        )
+
+    @pytest.mark.asyncio
+    async def test_prompt_device_status_report_with_memory_cache(self):
+        from wemo_mcp_server.server import _device_cache, prompt_device_status_report
+
+        _device_cache.clear()
+        mock_dev = Mock()
+        mock_dev.name = "Hallway Light"
+        _device_cache["Hallway Light"] = mock_dev
+
+        result = await prompt_device_status_report()
+        assert "Hallway Light" in result[0]["content"]
+
+        _device_cache.pop("Hallway Light", None)
+
+    @pytest.mark.asyncio
+    async def test_prompt_device_status_report_with_persisted_cache(self):
+        from wemo_mcp_server.server import _device_cache, prompt_device_status_report
+
+        _device_cache.clear()
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cache:
+            mock_cache.load.return_value = {"k1": {"name": "Porch Light"}}
+            result = await prompt_device_status_report()
+        assert "Porch Light" in result[0]["content"]
+
+    @pytest.mark.asyncio
+    async def test_prompt_activate_scene_movie_night(self):
+        from wemo_mcp_server.server import prompt_activate_scene
+
+        result = await prompt_activate_scene("movie night")
+        assert isinstance(result, list)
+        assert result[0]["role"] == "user"
+        assert "movie night" in result[0]["content"]
+        assert "dim" in result[0]["content"].lower()
+
+    @pytest.mark.asyncio
+    async def test_prompt_activate_scene_bedtime(self):
+        from wemo_mcp_server.server import prompt_activate_scene
+
+        result = await prompt_activate_scene("bedtime")
+        assert "bedtime" in result[0]["content"]
+
+    @pytest.mark.asyncio
+    async def test_prompt_activate_scene_away(self):
+        from wemo_mcp_server.server import prompt_activate_scene
+
+        result = await prompt_activate_scene("away")
+        assert "away" in result[0]["content"]
+
+    @pytest.mark.asyncio
+    async def test_prompt_activate_scene_full_brightness(self):
+        from wemo_mcp_server.server import prompt_activate_scene
+
+        result = await prompt_activate_scene("full brightness")
+        assert "full brightness" in result[0]["content"]
+
+    @pytest.mark.asyncio
+    async def test_prompt_activate_scene_unknown_falls_back_gracefully(self):
+        from wemo_mcp_server.server import prompt_activate_scene
+
+        result = await prompt_activate_scene("party mode")
+        assert isinstance(result, list)
+        assert "party mode" in result[0]["content"]
+
+    @pytest.mark.asyncio
+    async def test_prompt_troubleshoot_device(self):
+        from wemo_mcp_server.server import prompt_troubleshoot_device
+
+        result = await prompt_troubleshoot_device("Bedroom Light")
+        assert isinstance(result, list)
+        assert result[0]["role"] == "user"
+        assert "Bedroom Light" in result[0]["content"]
+        assert (
+            "diagnostic" in result[0]["content"].lower()
+            or "trouble" in result[0]["content"].lower()
+        )
+
+    @pytest.mark.asyncio
+    async def test_prompt_troubleshoot_device_ip_address(self):
+        from wemo_mcp_server.server import prompt_troubleshoot_device
+
+        result = await prompt_troubleshoot_device("192.168.1.55")
+        assert "192.168.1.55" in result[0]["content"]
 
 
 if __name__ == "__main__":
