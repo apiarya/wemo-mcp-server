@@ -105,6 +105,8 @@ ignore = [
     "PERF203", "PERF102",
     # Too strict for current codebase
     "FBT001", "FBT003", "B007", "RUF013",
+    # COM812/COM819 conflict with black's trailing comma formatting
+    "COM812", "COM819",
     # Line length (will fix incrementally)
     "E501",
     # Print statements and asserts (allowed in tests)
