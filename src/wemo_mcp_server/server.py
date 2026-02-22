@@ -14,6 +14,7 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import ValidationError
 
 from .cache import _cache_manager, serialize_device
+from .config import get_config
 from .error_handling import build_error_response, retry_on_network_error
 from .models import (
     ControlDeviceParams,
@@ -265,9 +266,9 @@ def extract_device_info(device: Any) -> dict[str, Any]:
 
 @mcp.tool()
 async def scan_network(
-    subnet: str = "192.168.1.0/24",
-    timeout: float = 0.6,
-    max_workers: int = 60,
+    subnet: str | None = None,
+    timeout: float | None = None,
+    max_workers: int | None = None,
 ) -> dict[str, Any]:
     """Scan network for WeMo devices using pywemo discovery.
 
@@ -277,9 +278,9 @@ async def scan_network(
     3. Using pywemo library to properly identify and parse WeMo devices
 
     Args:
-        subnet: Network subnet in CIDR notation (e.g., "192.168.1.0/24")
-        timeout: Connection timeout in seconds for port probing (0.1-5.0)
-        max_workers: Maximum concurrent workers for network scanning (1-200)
+        subnet: Network subnet in CIDR notation (default: from config or "192.168.1.0/24")
+        timeout: Connection timeout in seconds for port probing (default: from config or 0.6)
+        max_workers: Maximum concurrent workers for network scanning (default: from config or 60)
 
     Returns:
         Dictionary containing:
@@ -288,6 +289,17 @@ async def scan_network(
         - devices: List of discovered WeMo devices with full details
 
     """
+    # Get configuration
+    config = get_config()
+
+    # Use config defaults if not provided
+    if subnet is None:
+        subnet = config.get("network", "default_subnet", "192.168.1.0/24")
+    if timeout is None:
+        timeout = config.get("network", "scan_timeout", 0.6)
+    if max_workers is None:
+        max_workers = config.get("network", "max_workers", 60)
+
     # Validate inputs
     try:
         params = ScanNetworkParams(subnet=subnet, timeout=timeout, max_workers=max_workers)
@@ -479,6 +491,40 @@ async def clear_cache() -> dict[str, Any]:
     except Exception as e:
         logger.error(f"Error clearing cache: {e}", exc_info=True)
         return build_error_response(e, "Clear cache")
+
+
+@mcp.tool()
+async def get_configuration() -> dict[str, Any]:
+    """Get current server configuration.
+
+    Returns all configuration settings including network parameters,
+    cache settings, and logging levels. Useful for debugging or verifying
+    environment variable overrides.
+
+    Returns:
+        Dictionary containing:
+        - configuration: All configuration sections
+        - source: Information about configuration sources (env vars, config file)
+
+    """
+    try:
+        config = get_config()
+        return {
+            "success": True,
+            "configuration": config.get_all(),
+            "environment_variables": {
+                "prefix": "WEMO_MCP_",
+                "examples": [
+                    "WEMO_MCP_DEFAULT_SUBNET=192.168.1.0/24",
+                    "WEMO_MCP_CACHE_TTL=7200",
+                    "WEMO_MCP_LOG_LEVEL=DEBUG",
+                ],
+            },
+            "timestamp": time.time(),
+        }
+    except Exception as e:
+        logger.error(f"Error getting configuration: {e}", exc_info=True)
+        return build_error_response(e, "Get configuration")
 
 
 @mcp.tool()
