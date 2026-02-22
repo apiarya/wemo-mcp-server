@@ -5,6 +5,26 @@ All notable changes to the WeMo MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-02-22
+
+### Added
+- ✨ **MCP Resources** - Two new resources for direct device data access:
+  - `devices://` - Static JSON index of all cached devices (falls back to persistent cache)
+  - `device://{device_id}` - Live device state by name or IP address; supports URL-encoded names (e.g. `device://Master%20Bed%20346`)
+- ✨ **MCP Prompts** - Four slash-command prompts for AI assistants:
+  - `discover-devices` - Scan network and summarise all found WeMo devices
+  - `device-status-report` - Report status of all known devices (pre-populated with cached names)
+  - `activate-scene` - Control devices for preset lighting scenes (movie night, bedtime, wake up, away, full brightness)
+  - `troubleshoot-device` - 4-step diagnostic sequence for a named device
+
+### Fixed
+- 🐛 **URL-encoded device IDs in resources** - `device://{device_id}` now URL-decodes the parameter before lookup, fixing "not found" errors for device names containing spaces
+
+### Improved
+- 🔧 **CI test coverage** - CI now runs all 128 unit tests (`test_server.py` + `test_phase2.py` + `test_models.py`) instead of only 30
+
+---
+
 ## [1.3.1] - 2026-02-21
 
 ### Fixed
