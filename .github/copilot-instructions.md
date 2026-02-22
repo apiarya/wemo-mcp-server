@@ -1,77 +1,325 @@
 <!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
 
-# WeMo MCP Server Project Instructions
+# WeMo MCP Server - Copilot Instructions
 
-This project is a Model Context Protocol (MCP) server for WeMo device management with network scanning capabilities.
+**Production-ready MCP Server for WeMo smart home device control via AI assistants.**
 
-## Project Overview
-- **Type**: MCP Server (Python-based using FastMCP)
-- **Primary Function**: Network scanning and WeMo device discovery
-- **Framework**: MCP Python SDK with FastMCP
-- **Integration**: VS Code MCP configuration ready
+## Project Identity
+- **Repository**: https://github.com/apiarya/wemo-mcp-server
+- **Package**: `wemo-mcp-server` (PyPI)
+- **MCP Name**: `io.github.apiarya/wemo`
+- **Version**: v1.1.1 (stable)
+- **Status**: Production • Published on PyPI and MCP Registry
+
+## Project Type & Architecture
+- **Type**: Model Context Protocol (MCP) Server
+- **Framework**: FastMCP (mcp>=1.2.0)
+- **Language**: Python 3.10+ with type hints
 - **Transport**: stdio (JSON-RPC over stdin/stdout)
+- **Package Manager**: uv (with uv.lock for reproducible builds)
+- **Build System**: Hatchling
 
-## Development Guidelines
-- Follow MCP server development patterns using FastMCP
-- Use async/await for network operations
-- Implement proper error handling for network scanning and device discovery
-- Structure tools following MCP protocol specifications
-- Keep network scanning non-invasive and efficient
-- Log to stderr only (not stdout) to avoid corrupting MCP JSON-RPC messages
-
-## Key Components
-1. **Scan Network Tool**: Primary functionality for discovering WeMo devices on the network
-2. **Device Discovery**: Identify WeMo devices by manufacturer signatures and XML parsing
-3. **Network Analysis**: Scan specified IP ranges with configurable timeout and concurrency
-4. **Device Information Extraction**: Parse UPnP XML descriptions for device details
-5. **JSON Output**: Format results in structured device information
+## Core Functionality
+Natural language control of WeMo smart home devices through AI assistants:
+- Multi-phase device discovery (UPnP/SSDP + network scanning)
+- Real-time device control (on/off/toggle/brightness)
+- Device management (rename, HomeKit codes)
+- Status monitoring
+- Automatic device caching
 
 ## Project Structure
 ```
-mcp/
+wemo-mcp-server/
 ├── src/wemo_mcp_server/
-│   ├── __init__.py          # Package initialization and version
-│   └── server.py            # Main MCP server implementation with FastMCP
+│   ├── __init__.py          # Package init and version (__version__ = "1.1.1")
+│   ├── __main__.py          # Entry point for python -m wemo_mcp_server
+│   └── server.py            # Main server (701 lines) - all MCP tools and logic
 ├── tests/
 │   ├── __init__.py
-│   └── test_server.py       # Unit tests for server functionality
-├── .vscode/
-│   ├── mcp.json            # MCP client configuration for VS Code
-│   ├── tasks.json          # VS Code tasks (run server, run tests)
-│   └── launch.json         # VS Code debug configurations
-├── pyproject.toml          # Project metadata and dependencies
-├── README.md               # Comprehensive project documentation
-└── .github/
-    └── copilot-instructions.md  # This file
+│   ├── test_server.py       # Unit tests (15 tests)
+│   └── test_e2e.py          # End-to-end tests with real devices
+├── .github/
+│   ├── workflows/
+│   │   └── pypi-publish.yml # Automated publishing (PyPI + MCP Registry)
+│   ├── copilot-instructions.md  # This file
+│   ├── PYPI_PUBLISHING.md       # PyPI trusted publishing docs
+│   └── PUBLISHING_AUTOMATION.md # Automation guide
+├── assets/
+│   └── claude-example.png   # Screenshot for README
+├── pyproject.toml           # Package config (version, dependencies, metadata)
+├── server.json              # MCP Registry metadata
+├── uv.lock                  # Locked dependencies (291KB)
+├── README.md                # Comprehensive docs (456 lines)
+├── CHANGELOG.md             # Version history
+├── LICENSE                  # MIT License
+├── MIGRATION.md             # Migration documentation
+├── RELEASE.md               # Release process guide
+├── RELEASE_CHECKLIST.md     # Quick release checklist
+├── RELEASE_NOTES_v1.1.0.md  # v1.1.0 release notes
+├── RELEASE_NOTES_v1.1.1.md  # v1.1.1 release notes
+└── MCP_REGISTRY_SUBMISSION.md  # Registry submission docs
 ```
 
-## Available Tools
-- `scan_network(subnet, timeout, max_concurrent)`: Scan network for WeMo and other devices
+## MCP Tools (6 Total) - server.py
+All tools are async and decorated with `@mcp.tool()`:
 
-## Testing Approach
-- Unit tests with pytest for device identification and XML parsing
-- Async test support with pytest-asyncio
+### 1. `scan_network(subnet, timeout, max_workers)`
+- **Purpose**: Discover WeMo devices on network
+- **Method**: Multi-phase (UPnP/SSDP first, then port scanning backup)
+- **Returns**: Device list with full details + caches devices
+- **Performance**: ~23-30s for full /24 subnet with 60 workers
+
+### 2. `list_devices()`
+- **Purpose**: List cached devices from previous scans
+- **Returns**: Device count and device list
+- **Note**: Run scan_network first to populate cache
+
+### 3. `get_device_status(device_identifier)`
+- **Purpose**: Get real-time device state
+- **Input**: Device name or IP address
+- **Returns**: State (on/off), brightness (if dimmer), device info
+
+### 4. `control_device(device_identifier, action, brightness)`
+- **Purpose**: Control devices
+- **Actions**: "on", "off", "toggle", "brightness"
+- **Brightness**: 1-100 for dimmers
+- **Returns**: Success status, new state, brightness
+
+### 5. `rename_device(device_identifier, new_name)`
+- **Purpose**: Change device friendly name
+- **Updates**: Device cache and WeMo device itself
+- **Returns**: Old name, new name, success status
+
+### 6. `get_homekit_code(device_identifier)`
+- **Purpose**: Extract HomeKit setup code
+- **Note**: Not all devices support HomeKit
+- **Returns**: HomeKit code (format: XXX-XX-XXX)
+
+## Development Guidelines
+
+### Code Style
+- **Async/await**: All MCP tools must be async
+- **Type hints**: Use throughout (strict mypy)
+- **Logging**: Use `logging` module, log to stderr only (never stdout)
+- **Error handling**: Try/except with informative error dictionaries
+- **Docstrings**: Google-style docstrings for all functions
+
+### MCP Server Patterns
+- Use `FastMCP` for server initialization: `mcp = FastMCP("wemo-mcp-server")`
+- Tools return Dict[str, Any] with consistent structure
+- Include "error" key in results when operations fail
+- Provide "suggestion" keys for common issues
+- Cache devices in global `_device_cache` dict
+
+### Network Operations
+- Use `pywemo` library for WeMo device interaction
+- Run sync operations in thread pool: `loop.run_in_executor(None, func)`
+- Keep network scanning non-invasive (timeout 0.6s default)
+- Parallel scanning with ThreadPoolExecutor (60 workers default)
+- Multi-phase discovery: UPnP/SSDP primary, port scanning backup
+
+### Version Management
+**CRITICAL**: Keep versions synchronized across 3 files:
+1. `pyproject.toml` - Line 7: `version = "X.Y.Z"`
+2. `src/wemo_mcp_server/__init__.py` - Line 3: `__version__ = "X.Y.Z"`
+3. `server.json` - Line 10: `"version": "X.Y.Z"`
+
+GitHub Actions workflow verifies version consistency before publishing.
+
+## Testing
+
+### Unit Tests (test_server.py)
+- 15 tests covering core functionality
 - Mock-based testing for network operations
-- Test network scanning in isolated environments
-- Validate device discovery accuracy
-- Ensure proper error handling for network timeouts
-- Verify VS Code MCP integration works correctly
+- Tests WeMoScanner, extract_device_info, all MCP tools
+- Run: `pytest tests/test_server.py -v`
 
-## Development Commands
-- Run server: `python -m wemo_mcp_server` (with PYTHONPATH=src)
-- Run tests: `pytest tests/ -v`
-- Format code: `black src/`
-- Sort imports: `isort src/`
-- Type check: `mypy src/`
-- Lint: `ruff check src/`
+### E2E Tests (test_e2e.py)
+- Requires actual WeMo devices on network
+- Tests all 6 MCP tools end-to-end
+- Configurable device count and control testing
+- Run: `python tests/test_e2e.py`
 
-## VS Code Integration
-- MCP configuration: `.vscode/mcp.json`
-- Tasks available: "Run WeMo MCP Server", "Test WeMo MCP Server"
-- Debug configurations: "Debug WeMo MCP Server", "Debug WeMo MCP Server Tests"
-- Python environment: Uses local .venv with MCP dependencies
+### Test Commands
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ --cov=wemo_mcp_server --cov-report=html
+
+# Run E2E tests (needs real devices)
+python tests/test_e2e.py
+```
+
+## Common Development Commands
+
+```bash
+# Run server locally
+uvx wemo-mcp-server
+# or
+python -m wemo_mcp_server
+
+# Run tests
+pytest tests/ -v
+
+# Format code
+black src/ tests/
+isort src/ tests/
+
+# Type check
+mypy src/
+
+# Lint
+ruff check src/ tests/
+
+# Build package
+python -m build
+
+# Install locally for testing
+pip install -e .
+```
+
+## Publishing & CI/CD
+
+### Automated Publishing (✅ ACTIVE)
+**GitHub Actions workflow**: `.github/workflows/pypi-publish.yml`
+
+**Process**: Create GitHub release → Automated publish to PyPI + MCP Registry
+
+**Features**:
+- ✅ PyPI publishing via trusted publishing (OIDC)
+- ✅ MCP Registry publishing via github-oidc authentication
+- ✅ Version verification (pyproject.toml + server.json)
+- ✅ No secrets/tokens needed (all OIDC-based)
+- ✅ Detailed release summary
+
+**Security**: All publishing uses short-lived OIDC tokens (no API keys)
+
+### Manual Release Process
+```bash
+# 1. Update versions (3 files)
+vim pyproject.toml src/wemo_mcp_server/__init__.py server.json
+
+# 2. Update CHANGELOG.md
+vim CHANGELOG.md
+
+# 3. Commit and push
+git add -A
+git commit -m "Release vX.Y.Z"
+git push origin main
+
+# 4. Create tag and GitHub release
+git tag vX.Y.Z
+git push origin vX.Y.Z
+
+# 5. Create release on GitHub
+# → Workflow publishes to PyPI + MCP Registry automatically!
+```
+
+See `.github/PUBLISHING_AUTOMATION.md` for comprehensive automation guide.
+
+## MCP Client Testing
+
+### Claude Desktop
+```json
+// ~/Library/Application Support/Claude/claude_desktop_config.json
+{
+  "mcpServers": {
+    "wemo": {
+      "command": "uvx",
+      "args": ["wemo-mcp-server"]
+    }
+  }
+}
+```
+
+### VS Code
+```json
+// ~/.vscode/mcp.json
+{
+  "servers": {
+    "wemo": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["wemo-mcp-server"]
+    }
+  }
+}
+```
+
+Test prompts:
+- "Scan for WeMo devices on my network"
+- "Turn on the office light"
+- "What's the brightness of the bedroom dimmer?"
 
 ## Key Dependencies
-- mcp>=1.2.0: Model Context Protocol SDK
-- httpx>=0.25.0: Async HTTP client for device communication
-- Dev dependencies: pytest, black, isort, mypy, ruff
+
+### Production
+- `mcp>=1.2.0` - Model Context Protocol SDK
+- `httpx>=0.25.0` - Async HTTP client
+- `pywemo>=1.4.0` - WeMo device control library
+
+### Development
+- `pytest>=7.0.0` - Testing framework
+- `pytest-asyncio>=0.21.0` - Async test support
+- `black>=23.0.0` - Code formatter
+- `isort>=5.12.0` - Import sorter
+- `mypy>=1.0.0` - Type checker
+- `ruff>=0.1.0` - Fast linter
+
+## Important Notes
+
+### Device Cache
+- Global `_device_cache` dict stores discovered devices
+- Keyed by both device name and IP address
+- Persists during server lifetime
+- Cleared on server restart
+
+### Logging
+- **CRITICAL**: Only log to stderr (not stdout)
+- stdout is reserved for MCP JSON-RPC protocol
+- Use `logger.info()`, `logger.error()`, etc.
+- Configured in server.py with stderr stream
+
+### Error Handling
+- Always return Dict with "error" key on failures
+- Include "suggestion" for common issues
+- List "available_devices" when device not found
+- Use try/except blocks for all external operations
+
+### Network Discovery
+- UPnP/SSDP is primary method (most reliable)
+- Port scanning (49152-49155) is backup
+- Parallel probing with 60 concurrent workers
+- Configurable timeout (default 0.6s per port)
+
+## Documentation Standards
+
+- Keep README.md current with features and installation
+- Update CHANGELOG.md for every release
+- Document breaking changes prominently
+- Include example prompts in tool docstrings
+- Maintain comprehensive release notes
+
+## Git Workflow
+
+- **Main branch**: Production-ready code
+- **Tags**: Version format `vX.Y.Z` (e.g., `v1.1.1`)
+- **Commits**: Descriptive messages with context
+- **No direct commits to main**: Use feature branches for major changes
+
+## Support & Community
+
+- **Issues**: https://github.com/apiarya/wemo-mcp-server/issues
+- **Discussions**: GitHub Discussions tab
+- **PyPI**: https://pypi.org/project/wemo-mcp-server/
+- **MCP Registry**: https://registry.modelcontextprotocol.io/?q=apiarya/wemo
+
+## Related Projects
+- **pywemo**: https://github.com/pywemo/pywemo (underlying library)
+- **WeMo Ops Center**: https://github.com/qrussell/wemo-ops-center (desktop app)
+
+---
+
+**Last Updated**: February 21, 2026 (v1.1.1 + automated publishing)
