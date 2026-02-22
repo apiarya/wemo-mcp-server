@@ -1,6 +1,6 @@
 """Unit tests for WeMo MCP server components."""
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -318,7 +318,7 @@ class TestMCPToolsHappyPath:
         _device_cache.clear()
 
         # Use spec to limit attributes and prevent hasattr from finding brightness methods
-        mock_device = Mock(spec=['name', 'host', 'model', 'get_state'])
+        mock_device = Mock(spec=["name", "host", "model", "get_state"])
         mock_device.name = "Test Device"
         mock_device.host = "192.168.1.20"
         mock_device.model = "Socket"
