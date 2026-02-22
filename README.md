@@ -5,10 +5,12 @@ Control WeMo smart home devices through AI assistants using natural language.
 **mcp-name: io.github.apiarya/wemo**
 
 [![MCP](https://img.shields.io/badge/MCP-Server-blue)](https://modelcontextprotocol.io)
-[![MCP Registry](https://img.shields.io/badge/MCP_Registry-Registered-green)](https://registry.modelcontextprotocol.io/?q=wemo)
+[![Transport](https://img.shields.io/badge/Transport-stdio-lightblue)](https://modelcontextprotocol.io/docs/concepts/transports)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-Registered-green)](https://registry.modelcontextprotocol.io/?q=apiarya/wemo)
+
 [![PyPI version](https://img.shields.io/pypi/v/wemo-mcp-server)](https://pypi.org/project/wemo-mcp-server/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Transport](https://img.shields.io/badge/Transport-stdio-lightblue)](https://modelcontextprotocol.io/docs/concepts/transports)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Table of Contents
@@ -451,5 +453,3 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - Built with [Model Context Protocol SDK](https://github.com/modelcontextprotocol/python-sdk)
 - Uses [pywemo](https://github.com/pywemo/pywemo) for WeMo device communication
 - Related to the [wemo-ops-center](https://github.com/qrussell/wemo-ops-center) project (desktop and server applications)
-
-mcp-name: io.github.qrussell/wemo
