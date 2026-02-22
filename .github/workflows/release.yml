@@ -139,11 +139,25 @@ jobs:
           fi
           echo "✅ server.json version verified: $SERVER_VERSION"
 
+      - name: Wait for PyPI propagation
+        run: |
+          echo "⏳ Waiting 60s for PyPI to fully propagate before MCP Registry validation..."
+          sleep 60
+
       - name: Publish to MCP Registry
         run: |
           echo "📤 Publishing to MCP Registry..."
-          ./mcp-publisher publish server.json
-          echo "✅ Successfully published to MCP Registry"
+          # Retry up to 3 times — MCP Registry validates against PyPI, which may lag
+          for i in 1 2 3; do
+            if ./mcp-publisher publish server.json; then
+              echo "✅ Successfully published to MCP Registry"
+              exit 0
+            fi
+            echo "⚠️ Attempt $i failed. Waiting 30s before retry..."
+            sleep 30
+          done
+          echo "❌ MCP Registry publish failed after 3 attempts"
+          exit 1
 
       - name: Create release summary
         run: |
