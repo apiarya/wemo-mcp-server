@@ -66,10 +66,26 @@ jobs:
           # Using trusted publishing (OIDC) - configured at https://pypi.org/manage/project/wemo-mcp-server/settings/publishing/
           # Publisher setup: apiarya/wemo-mcp-server -> release.yml
 
-      - name: Wait for PyPI to index package
+      - name: Verify PyPI publish succeeded
         run: |
-          echo "⏳ Waiting 30 seconds for PyPI to index the new version..."
-          sleep 30
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "⏳ Waiting for PyPI to index version $VERSION..."
+          # Retry up to 5 times (max ~2.5 minutes) before giving up
+          for i in 1 2 3 4 5; do
+            sleep 30
+            echo "Attempt $i: checking https://pypi.org/pypi/wemo-mcp-server/$VERSION/json"
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://pypi.org/pypi/wemo-mcp-server/$VERSION/json")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "✅ Package wemo-mcp-server==$VERSION is live on PyPI"
+              break
+            fi
+            echo "Not available yet (HTTP $HTTP_STATUS), retrying..."
+            if [ "$i" = "5" ]; then
+              echo "❌ Package not found on PyPI after 5 attempts"
+              exit 1
+            fi
+          done
 
       - name: Install mcp-publisher
         run: |
