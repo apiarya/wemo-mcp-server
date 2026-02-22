@@ -1365,6 +1365,148 @@ async def get_device_resource(device_id: str) -> str:
     return json.dumps(info, indent=2)
 
 
+# ---------------------------------------------------------------------------
+# MCP Prompts
+# ---------------------------------------------------------------------------
+# Prompts are pre-written message templates the user can invoke from the
+# client's prompt picker (e.g. Claude Desktop slash-commands, VS Code).
+# They inject one or more messages into the conversation — the model then
+# acts on them using the available tools.
+# ---------------------------------------------------------------------------
+
+
+@mcp.prompt(
+    name="discover-devices",
+    title="Discover WeMo Devices",
+    description="Scan the network for WeMo devices and summarise what was found.",
+)
+async def prompt_discover_devices() -> list[dict]:
+    """Scan the network and report all discovered WeMo smart home devices."""
+    config = get_config()
+    subnet = config.get("network", "default_subnet", "192.168.1.0/24")
+    return [
+        {
+            "role": "user",
+            "content": (
+                f"Please scan my home network ({subnet}) for WeMo smart home devices. "
+                "Use the scan_network tool, then give me a clear summary of:\n"
+                "1. How many devices were found\n"
+                "2. Each device's name, type (switch/dimmer), and current state (on/off)\n"
+                "3. Any devices that could not be reached\n"
+                "Present the results in a clean, readable format."
+            ),
+        }
+    ]
+
+
+@mcp.prompt(
+    name="device-status-report",
+    title="Device Status Report",
+    description="Get a full status report of all known WeMo devices.",
+)
+async def prompt_device_status_report() -> list[dict]:
+    """Check the status of every known device and produce a summary report."""
+    # Pull device names from cache so the prompt is pre-populated
+    persisted = _cache_manager.load()
+    if _device_cache:
+        names = sorted(
+            {getattr(d, "name", k) for k, d in _device_cache.items() if not isinstance(d, dict)}
+        )
+    elif persisted:
+        names = sorted(
+            {v.get("name", "") for v in persisted.values() if isinstance(v, dict) and v.get("name")}
+        )
+    else:
+        names = []
+
+    if names:
+        device_list = "\n".join(f"  - {n}" for n in names)
+        device_context = f"Known devices:\n{device_list}\n\n"
+    else:
+        device_context = "No devices in cache yet — you may need to scan first.\n\n"
+
+    return [
+        {
+            "role": "user",
+            "content": (
+                f"{device_context}"
+                "Please check the current status of all my WeMo devices and give me a report. "
+                "For each device include: name, type, state (on/off), and brightness if it's a dimmer. "
+                "If a device is unreachable, flag it clearly. "
+                "Finish with a one-line summary of how many devices are on vs off."
+            ),
+        }
+    ]
+
+
+@mcp.prompt(
+    name="activate-scene",
+    title="Activate a Lighting Scene",
+    description="Set all WeMo devices to match a named scene (e.g. movie night, bedtime, wake up).",
+)
+async def prompt_activate_scene(
+    scene: str = "movie night",
+) -> list[dict]:
+    """Activate a named lighting scene across all WeMo devices.
+
+    Args:
+    ----
+        scene: Scene name such as 'movie night', 'bedtime', 'wake up', 'away', or 'full brightness'.
+
+    """
+    scene_hints = {
+        "movie night": "dim all lights to around 20-30% brightness, turn off any bright overhead lights",
+        "bedtime": "turn off all lights except any nightlights, set dimmers to minimum",
+        "wake up": "gradually bring all lights to 70% brightness",
+        "away": "turn off all lights completely",
+        "full brightness": "turn on all lights and set all dimmers to 100%",
+    }
+    hint = scene_hints.get(scene.lower().strip(), f"configure lights to match the '{scene}' mood")
+
+    return [
+        {
+            "role": "user",
+            "content": (
+                f"Please activate the '{scene}' scene on my WeMo smart home devices.\n\n"
+                f"For this scene you should: {hint}.\n\n"
+                "Use list_devices to see what's available, then control each device appropriately "
+                "using control_device. After making the changes, confirm what you did."
+            ),
+        }
+    ]
+
+
+@mcp.prompt(
+    name="troubleshoot-device",
+    title="Troubleshoot a Device",
+    description="Diagnose and attempt to fix issues with a specific WeMo device.",
+)
+async def prompt_troubleshoot_device(
+    device_name: str,
+) -> list[dict]:
+    """Run a diagnostic sequence on a specific WeMo device.
+
+    Args:
+    ----
+        device_name: Name or IP address of the device to troubleshoot.
+
+    """
+    return [
+        {
+            "role": "user",
+            "content": (
+                f"I'm having trouble with my WeMo device: '{device_name}'.\n\n"
+                "Please run a diagnostic:\n"
+                "1. Use get_device_status to check if it's reachable and what state it reports\n"
+                "2. Try toggling it on and off with control_device to verify it responds to commands\n"
+                "3. Check the cache with get_cache_info to see if the device info is stale\n"
+                "4. If the device isn't found, suggest running scan_network to rediscover it\n\n"
+                "After the diagnostic, tell me what you found and what was fixed or what to try next."
+            ),
+        }
+    ]
+
+
 def main() -> None:
     """Start the WeMo MCP server."""
     logger.info("Starting WeMo MCP Server...")
