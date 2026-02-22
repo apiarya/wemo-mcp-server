@@ -341,8 +341,8 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete history.
 
 ## Support
 
-**Questions**: [Open a discussion](https://github.com/apiarya/wemo-mcp-server/discussions)  
-**Issues**: [Report a bug](https://github.com/apiarya/wemo-mcp-server/issues)  
+**Questions**: [Open a discussion](https://github.com/apiarya/wemo-mcp-server/discussions)
+**Issues**: [Report a bug](https://github.com/apiarya/wemo-mcp-server/issues)
 **Contributing**: See [CONTRIBUTING.md](../CONTRIBUTING.md)
 
 ---

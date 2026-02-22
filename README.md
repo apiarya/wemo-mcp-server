@@ -51,7 +51,7 @@ Seamlessly integrate WeMo smart home devices with AI assistants through the Mode
 
 - **🔍 Smart Discovery** - Multi-phase scanning (UPnP/SSDP + network ports) with 100% reliability
 - **⚡ Fast Scanning** - Parallel probes with 60 concurrent workers (~23-30s for full subnet)
-- **🎛️ Full Control** - On/off/toggle/brightness control for all device types  
+- **🎛️ Full Control** - On/off/toggle/brightness control for all device types
 - **✏️ Device Management** - Rename devices and extract HomeKit setup codes
 - **📊 Real-time Status** - Query device state and brightness
 - **💾 Smart Caching** - Persistent device cache with 1-hour TTL survives restarts
@@ -331,7 +331,7 @@ Found 12 WeMo devices in 23.5 seconds:
 
 1. Office Light (Dimmer) - 192.168.1.100 - OFF
 2. Living Room (Switch) - 192.168.1.101 - ON
-3. Bedroom Lamp (Dimmer) - 192.168.1.102 - OFF  
+3. Bedroom Lamp (Dimmer) - 192.168.1.102 - OFF
 ...
 ```
 
@@ -405,7 +405,7 @@ Rename a WeMo device (change its friendly name).
 ✓ Device renamed successfully
   'Office Dimmer' → 'Office Light'
   IP: 192.168.1.100
-  
+
 The new name will appear in the WeMo app and all control interfaces.
 ```
 
@@ -422,7 +422,7 @@ Get the HomeKit setup code for a WeMo device.
 ```
 HomeKit Setup Code for 'Office Light':
   123-45-678
-  
+
 Use this code to add the device to Apple Home.
 ```
 

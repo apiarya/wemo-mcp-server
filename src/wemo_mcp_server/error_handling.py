@@ -19,6 +19,7 @@ class WeMoError(Exception):
         """Initialize WeMo error with message and optional suggestion.
 
         Args:
+        ----
             message: Error message
             suggestion: Optional actionable suggestion
 
@@ -48,12 +49,14 @@ def retry_on_network_error(
     """Decorator to retry async functions on network errors with exponential backoff.
 
     Args:
+    ----
         max_attempts: Maximum number of retry attempts (default: 3)
         initial_delay: Initial delay between retries in seconds (default: 0.5)
         backoff_factor: Multiplier for delay on each retry (default: 2.0)
         exceptions: Tuple of exceptions to catch and retry (default: network errors)
 
     Returns:
+    -------
         Decorated function with retry logic
 
     """
@@ -97,9 +100,11 @@ def classify_error(exception: Exception) -> dict[str, Any]:
     """Classify an exception and provide actionable suggestions.
 
     Args:
+    ----
         exception: Exception to classify
 
     Returns:
+    -------
         Dictionary with error classification and suggestions
 
     """
@@ -107,7 +112,7 @@ def classify_error(exception: Exception) -> dict[str, Any]:
     error_msg = str(exception)
 
     # Network-related errors
-    if isinstance(exception, (ConnectionError, TimeoutError, OSError)):
+    if isinstance(exception, ConnectionError | TimeoutError | OSError):
         return {
             "error_category": "network",
             "error_type": error_type,
@@ -172,11 +177,13 @@ def build_error_response(
     """Build a standardized error response dictionary.
 
     Args:
+    ----
         exception: The exception that occurred
         operation: Name of the operation that failed
         context: Optional context information (params, device names, etc.)
 
     Returns:
+    -------
         Standardized error response dictionary
 
     """

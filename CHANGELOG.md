@@ -34,7 +34,7 @@ Major enhancement release adding error handling, persistent caching, and full co
   - 3 retry attempts by default
   - Configurable retry delay (default: 0.5s, doubles each retry)
   - Applied to all network/device operations
-- 💾 **Persistent Device Cache** 
+- 💾 **Persistent Device Cache**
   - JSON-based cache at `~/.wemo_mcp_cache.json`
   - 1-hour TTL (configurable)
   - Survives server restarts
@@ -80,7 +80,7 @@ Major enhancement release adding error handling, persistent caching, and full co
 ### Technical
 - 📦 **New Modules**
   - `src/wemo_mcp_server/error_handling.py` (205 lines)
-  - `src/wemo_mcp_server/cache.py` (222 lines)  
+  - `src/wemo_mcp_server/cache.py` (222 lines)
   - `src/wemo_mcp_server/config.py` (242 lines)
 - 🔍 **Dependencies**
   - `pydantic>=2.0.0` - Input validation
@@ -171,7 +171,7 @@ The WeMo MCP Server has been migrated to its own dedicated repository for better
 
 ### Why This Move?
 1. **MCP Registry Compliance** - Registry requires base repository URLs without path components
-2. **Better Discoverability** - Users from registry land directly on MCP documentation  
+2. **Better Discoverability** - Users from registry land directly on MCP documentation
 3. **Industry Standards** - Aligns with patterns used by major MCP servers (GitHub, Cloudflare)
 4. **Clearer Separation** - Reduces confusion between desktop app and MCP server releases
 

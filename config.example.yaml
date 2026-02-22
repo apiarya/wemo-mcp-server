@@ -14,21 +14,21 @@ network:
   # Default subnet to scan if not specified in scan_network call
   # CIDR notation (e.g., "192.168.1.0/24" for 192.168.1.0-192.168.1.255)
   default_subnet: "192.168.1.0/24"
-  
+
   # Connection timeout for port probing (in seconds)
   # Lower values = faster scan, but may miss slow-responding devices
   # Range: 0.1 - 5.0 seconds
   scan_timeout: 0.6
-  
+
   # Maximum concurrent workers for parallel scanning
   # Higher values = faster scan, but may overwhelm network
   # Range: 1 - 200 workers
   max_workers: 60
-  
+
   # Number of retry attempts for network operations
   # Applied to device control and status operations
   retry_attempts: 3
-  
+
   # Initial delay between retries (in seconds)
   # Delay doubles with exponential backoff on each retry
   retry_delay: 0.5
@@ -38,11 +38,11 @@ cache:
   # Enable or disable persistent device caching
   # When enabled, discovered devices are saved to disk
   enabled: true
-  
+
   # Path to cache file
   # Default: ~/.wemo_mcp_cache.json
   file_path: "~/.wemo_mcp_cache.json"
-  
+
   # Time-to-live for cached devices (in seconds)
   # After this time, cache is considered stale and will rescan
   # Default: 3600 (1 hour)
@@ -53,7 +53,7 @@ cache:
 logging:
   # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
   level: "INFO"
-  
+
   # Log format (Python logging format string)
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 

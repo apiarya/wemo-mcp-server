@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Have a question? We're here to help! 
-        
+        Have a question? We're here to help!
+
         For general discussions, consider using [GitHub Discussions](https://github.com/apiarya/wemo-mcp-server/discussions) instead.
 
   - type: checkboxes
@@ -93,7 +93,7 @@ body:
       description: Relevant environment details
       placeholder: |
         - OS: [e.g., macOS, Windows, Linux]
-        - Python version: [if relevant]  
+        - Python version: [if relevant]
         - Installation method: [pip, uvx, etc.]
 
   - type: textarea

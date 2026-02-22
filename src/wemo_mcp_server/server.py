@@ -46,9 +46,11 @@ async def _reconnect_device_from_cache(identifier: str) -> Any | None:
     connection using the stored host/port.
 
     Args:
+    ----
         identifier: Device name or IP address
 
     Returns:
+    -------
         pywemo device object if reconnected successfully, None otherwise
 
     """
@@ -122,11 +124,13 @@ class WeMoScanner:
         """Probe an IP address on common WeMo ports.
 
         Args:
+        ----
             ip: IP address to probe
             ports: List of ports to check (default: WeMo ports)
             timeout: Connection timeout
 
         Returns:
+        -------
             IP address if responsive, None otherwise
 
         """
@@ -151,7 +155,8 @@ class WeMoScanner:
     def _run_upnp_discovery(self) -> list[Any]:
         """Run UPnP/SSDP discovery phase.
 
-        Returns:
+        Returns
+        -------
             List of devices found via UPnP/SSDP
 
         """
@@ -170,9 +175,11 @@ class WeMoScanner:
         """Parse CIDR notation and return list of hosts.
 
         Args:
+        ----
             target_cidr: CIDR notation subnet
 
         Returns:
+        -------
             List of IP addresses to scan, or None if invalid
 
         """
@@ -189,10 +196,12 @@ class WeMoScanner:
         """Probe hosts for active IPs on WeMo ports.
 
         Args:
+        ----
             all_hosts: List of IP addresses to probe
             max_workers: Maximum concurrent workers
 
         Returns:
+        -------
             List of active IP addresses
 
         """
@@ -214,10 +223,12 @@ class WeMoScanner:
         """Verify if active IPs are WeMo devices.
 
         Args:
+        ----
             active_ips_to_check: List of IPs to verify
             max_workers: Maximum concurrent workers
 
         Returns:
+        -------
             List of verified WeMo device objects
 
         """
@@ -266,10 +277,12 @@ class WeMoScanner:
         This matches the proven approach from wemo-ops-center UI.
 
         Args:
+        ----
             target_cidr: CIDR notation subnet (e.g., "192.168.1.0/24")
             max_workers: Maximum concurrent workers for scanning
 
         Returns:
+        -------
             List of discovered pywemo device objects
 
         """
@@ -299,9 +312,11 @@ def extract_device_info(device: Any) -> dict[str, Any]:
     """Extract device information from a pywemo device object.
 
     Args:
+    ----
         device: pywemo device object
 
     Returns:
+    -------
         Dictionary containing device information
 
     """
@@ -345,11 +360,13 @@ async def scan_network(
     3. Using pywemo library to properly identify and parse WeMo devices
 
     Args:
+    ----
         subnet: Network subnet in CIDR notation (default: from config or "192.168.1.0/24")
         timeout: Connection timeout in seconds for port probing (default: from config or 0.6)
         max_workers: Maximum concurrent workers for network scanning (default: from config or 60)
 
     Returns:
+    -------
         Dictionary containing:
         - scan_parameters: The parameters used for scanning
         - results: Summary with device counts
@@ -465,7 +482,8 @@ async def list_devices() -> dict[str, Any]:
     Returns a list of devices that were found in previous network scans.
     Run scan_network first to populate the device cache.
 
-    Returns:
+    Returns
+    -------
         Dictionary containing:
         - device_count: Number of cached devices
         - devices: List of device names and IPs
@@ -526,7 +544,8 @@ async def get_cache_info() -> dict[str, Any]:
     Returns information about the cache file including age, expiration status,
     and device count. Useful for determining if a rescan is needed.
 
-    Returns:
+    Returns
+    -------
         Dictionary containing:
         - exists: Whether cache file exists
         - path: Path to cache file
@@ -553,7 +572,8 @@ async def clear_cache() -> dict[str, Any]:
     have changed or cache is corrupted. Run scan_network after clearing
     to rebuild the cache.
 
-    Returns:
+    Returns
+    -------
         Dictionary containing:
         - success: Whether cache was cleared successfully
         - message: Descriptive message
@@ -591,7 +611,8 @@ async def get_configuration() -> dict[str, Any]:
     cache settings, and logging levels. Useful for debugging or verifying
     environment variable overrides.
 
-    Returns:
+    Returns
+    -------
         Dictionary containing:
         - configuration: All configuration sections
         - source: Information about configuration sources (env vars, config file)
@@ -625,9 +646,11 @@ async def get_device_status(device_identifier: str) -> dict[str, Any]:
     The device must have been discovered via scan_network first.
 
     Args:
+    ----
         device_identifier: Device name (e.g., "Office Light") or IP address (e.g., "192.168.1.100")
 
     Returns:
+    -------
         Dictionary containing:
         - device_name: Name of the device
         - state: Current state ("on" or "off")
@@ -708,9 +731,11 @@ async def _get_device_state_with_retry(device: Any) -> bool:
     """Get device state with automatic retry on network errors.
 
     Args:
+    ----
         device: WeMo device object
 
     Returns:
+    -------
         Device state (True=on, False=off)
 
     """
@@ -723,9 +748,11 @@ async def _get_device_brightness_with_retry(device: Any) -> int:
     """Get device brightness with automatic retry on network errors.
 
     Args:
+    ----
         device: WeMo device object
 
     Returns:
+    -------
         Brightness level (0-100)
 
     """
@@ -738,6 +765,7 @@ async def _set_device_state_with_retry(device: Any, state: bool) -> None:
     """Set device state with automatic retry on network errors.
 
     Args:
+    ----
         device: WeMo device object
         state: Desired state (True=on, False=off)
 
@@ -754,6 +782,7 @@ async def _toggle_device_with_retry(device: Any) -> None:
     """Toggle device state with automatic retry on network errors.
 
     Args:
+    ----
         device: WeMo device object
 
     """
@@ -766,6 +795,7 @@ async def _set_device_brightness_with_retry(device: Any, brightness: int) -> Non
     """Set device brightness with automatic retry on network errors.
 
     Args:
+    ----
         device: WeMo device object
         brightness: Brightness level (1-100)
 
@@ -783,9 +813,11 @@ def _validate_action(action: str) -> dict[str, Any] | None:
     """Validate control action.
 
     Args:
+    ----
         action: Action string to validate
 
     Returns:
+    -------
         Error dict if invalid, None if valid
 
     """
@@ -801,9 +833,11 @@ def _validate_brightness(brightness: int | None) -> dict[str, Any] | None:
     """Validate brightness value.
 
     Args:
+    ----
         brightness: Brightness value to validate
 
     Returns:
+    -------
         Error dict if invalid, None if valid
 
     """
@@ -824,6 +858,7 @@ async def _perform_device_action(
     """Perform the requested action on device with automatic retry.
 
     Args:
+    ----
         device: WeMo device object
         action: Action to perform
         brightness: Brightness value (if applicable)
@@ -847,11 +882,13 @@ async def _build_control_result(device: Any, action: str, is_dimmer: bool) -> di
     """Build result dictionary after control action with retry.
 
     Args:
+    ----
         device: WeMo device object
         action: Action that was performed
         is_dimmer: Whether device is a dimmer
 
     Returns:
+    -------
         Result dictionary
 
     """
@@ -887,11 +924,13 @@ async def control_device(
     The device must have been discovered via scan_network first.
 
     Args:
+    ----
         device_identifier: Device name (e.g., "Office Light") or IP address (e.g., "192.168.1.100")
         action: Action to perform - must be one of: "on", "off", "toggle", "brightness"
         brightness: Brightness level (1-100) - only used when action is "brightness" or "on" for dimmer devices
 
     Returns:
+    -------
         Dictionary containing:
         - success: Boolean indicating if the action succeeded
         - device_name: Name of the device
@@ -991,10 +1030,12 @@ async def rename_device(device_identifier: str, new_name: str) -> dict[str, Any]
     want to run scan_network again to refresh the device list.
 
     Args:
+    ----
         device_identifier: Current device name (e.g., "Office Dimmer") or IP address (e.g., "192.168.1.100")
         new_name: New friendly name for the device (e.g., "Office Light")
 
     Returns:
+    -------
         Dictionary containing:
         - success: Boolean indicating if the rename succeeded
         - old_name: The previous name of the device
@@ -1101,9 +1142,11 @@ async def get_homekit_code(device_identifier: str) -> dict[str, Any]:
     HomeKit or doesn't have a setup code, an error will be returned.
 
     Args:
+    ----
         device_identifier: Device name (e.g., "Office Light") or IP address (e.g., "192.168.1.100")
 
     Returns:
+    -------
         Dictionary containing:
         - success: Boolean indicating if the code was retrieved
         - device_name: Name of the device

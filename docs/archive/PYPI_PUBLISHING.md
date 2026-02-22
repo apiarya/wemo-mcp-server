@@ -6,8 +6,8 @@ The PyPI package `wemo-mcp-server` is configured for Trusted Publishing with the
 
 ## Current Configuration
 
-**PyPI Project:** wemo-mcp-server  
-**Package Owner:** @apiarya  
+**PyPI Project:** wemo-mcp-server
+**Package Owner:** @apiarya
 **Publishing Method:** Trusted Publishing (OIDC)
 
 ### Trusted Publisher (Active) ✅
@@ -138,6 +138,6 @@ After successful v1.1.1 release from new repo:
 
 ---
 
-**Configuration Date:** February 21, 2026  
-**Configured By:** @apiarya  
+**Configuration Date:** February 21, 2026
+**Configured By:** @apiarya
 **Status:** ✅ Ready for first release

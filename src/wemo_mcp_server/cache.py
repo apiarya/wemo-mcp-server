@@ -25,6 +25,7 @@ class DeviceCache:
         """Initialize device cache manager.
 
         Args:
+        ----
             cache_file: Path to cache file (default: ~/.wemo_mcp_cache.json)
             ttl_seconds: Time-to-live for cache entries in seconds (default: 3600)
 
@@ -36,7 +37,8 @@ class DeviceCache:
     def load(self) -> dict[str, Any]:
         """Load device cache from disk.
 
-        Returns:
+        Returns
+        -------
             Dictionary of cached device information
 
         """
@@ -82,9 +84,11 @@ class DeviceCache:
         """Save device cache to disk.
 
         Args:
+        ----
             devices: Dictionary of device information to cache
 
         Returns:
+        -------
             True if save successful, False otherwise
 
         """
@@ -119,7 +123,8 @@ class DeviceCache:
     def clear(self) -> bool:
         """Clear the device cache (delete cache file).
 
-        Returns:
+        Returns
+        -------
             True if cleared successfully, False otherwise
 
         """
@@ -138,7 +143,8 @@ class DeviceCache:
     def is_expired(self) -> bool:
         """Check if the current cache is expired.
 
-        Returns:
+        Returns
+        -------
             True if cache is expired or doesn't exist, False otherwise
 
         """
@@ -158,7 +164,8 @@ class DeviceCache:
     def get_cache_info(self) -> dict[str, Any]:
         """Get information about the current cache.
 
-        Returns:
+        Returns
+        -------
             Dictionary with cache metadata
 
         """
@@ -198,9 +205,11 @@ def serialize_device(device: Any) -> dict[str, Any]:
     """Serialize a pywemo device to JSON-compatible dictionary.
 
     Args:
+    ----
         device: pywemo device object
 
     Returns:
+    -------
         Dictionary with device information
 
     """

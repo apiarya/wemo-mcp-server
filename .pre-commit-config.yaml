@@ -16,12 +16,6 @@ repos:
     hooks:
       - id: black
 
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ["--profile", "black"]
-
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.2.1
     hooks:
@@ -37,3 +31,12 @@ repos:
           - pydantic
           - types-PyYAML
         args: [--ignore-missing-imports]
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: .venv/bin/python -m pytest tests/test_server.py tests/test_phase2.py tests/test_models.py -q --tb=short
+        language: system
+        pass_filenames: false
+        always_run: true

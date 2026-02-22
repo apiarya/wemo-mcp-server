@@ -7,7 +7,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from wemo_mcp_server.cache import CACHE_VERSION, DeviceCache, serialize_device
 from wemo_mcp_server.config import Config, get_config, init_config
 from wemo_mcp_server.error_handling import (
@@ -60,7 +59,7 @@ class TestWeMoExceptions:
 class TestRetryDecorator:
     """Tests for retry_on_network_error decorator."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_success_on_first_attempt(self):
         """Function that succeeds returns result without retrying."""
         call_count = 0
@@ -75,7 +74,7 @@ class TestRetryDecorator:
         assert result == "ok"
         assert call_count == 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_retries_on_connection_error(self):
         """Function retries on ConnectionError and eventually succeeds."""
         call_count = 0
@@ -92,7 +91,7 @@ class TestRetryDecorator:
         assert result == "recovered"
         assert call_count == 3
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_raises_network_error_after_all_attempts(self):
         """Raises NetworkError after exhausting all retry attempts."""
 
@@ -106,7 +105,7 @@ class TestRetryDecorator:
         assert "2 attempts" in str(exc_info.value)
         assert exc_info.value.suggestion is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_does_not_retry_non_network_exceptions(self):
         """Does not retry on exceptions not in the exceptions list."""
         call_count = 0
@@ -122,7 +121,7 @@ class TestRetryDecorator:
 
         assert call_count == 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_timeout_error_triggers_retry(self):
         """TimeoutError is retried as a network error."""
         call_count = 0

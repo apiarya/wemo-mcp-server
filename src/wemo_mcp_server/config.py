@@ -46,6 +46,7 @@ class Config:
         """Initialize configuration manager.
 
         Args:
+        ----
             config_file: Optional path to YAML configuration file
 
         """
@@ -63,6 +64,7 @@ class Config:
         """Load configuration from YAML file.
 
         Args:
+        ----
             config_file: Path to YAML configuration file
 
         """
@@ -123,6 +125,7 @@ class Config:
         """Merge new configuration into existing config.
 
         Args:
+        ----
             new_config: Dictionary with new configuration values
 
         """
@@ -136,11 +139,13 @@ class Config:
         """Get a configuration value.
 
         Args:
+        ----
             section: Configuration section (e.g., 'network', 'cache')
             key: Configuration key within section
             default: Default value if not found
 
         Returns:
+        -------
             Configuration value or default
 
         """
@@ -150,9 +155,11 @@ class Config:
         """Get entire configuration section.
 
         Args:
+        ----
             section: Configuration section name
 
         Returns:
+        -------
             Dictionary with section configuration
 
         """
@@ -162,6 +169,7 @@ class Config:
         """Set a configuration value.
 
         Args:
+        ----
             section: Configuration section
             key: Configuration key
             value: Value to set
@@ -175,7 +183,8 @@ class Config:
     def get_all(self) -> dict[str, Any]:
         """Get all configuration.
 
-        Returns:
+        Returns
+        -------
             Complete configuration dictionary
 
         """
@@ -185,9 +194,11 @@ class Config:
         """Save current configuration to YAML file.
 
         Args:
+        ----
             config_file: Path to save configuration
 
         Returns:
+        -------
             True if saved successfully, False otherwise
 
         """
@@ -219,7 +230,8 @@ _config = Config()
 def get_config() -> Config:
     """Get the global configuration instance.
 
-    Returns:
+    Returns
+    -------
         Config instance
 
     """
@@ -230,9 +242,11 @@ def init_config(config_file: Path | None = None) -> Config:
     """Initialize configuration with optional config file.
 
     Args:
+    ----
         config_file: Optional path to YAML configuration file
 
     Returns:
+    -------
         Config instance
 
     """

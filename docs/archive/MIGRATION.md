@@ -1,7 +1,7 @@
 # WeMo MCP Server Migration Plan
 
-**Migration Date:** February 21, 2026  
-**From:** `qrussell/wemo-ops-center/mcp`  
+**Migration Date:** February 21, 2026
+**From:** `qrussell/wemo-ops-center/mcp`
 **To:** `apiarya/wemo-mcp-server`
 
 ---
@@ -22,8 +22,8 @@ The decision to migrate was made following PR #18 discussions, where it was disc
 
 ## Phase 1: Prepare New Repository 🏗️ ✅ COMPLETED
 
-**Status:** ✅ Completed on February 21, 2026  
-**Execution Time:** ~5 minutes  
+**Status:** ✅ Completed on February 21, 2026
+**Execution Time:** ~5 minutes
 **Method Used:** Option A - Preserved Git History
 
 ### 1.1 Copy Core Files with Git History (Recommended) ✅
@@ -148,8 +148,8 @@ Issues = "https://github.com/apiarya/wemo-mcp-server/issues"
 
 ## Phase 2: Update References 🔄 ✅ COMPLETED
 
-**Status:** ✅ Completed on February 21, 2026  
-**Execution Time:**~20 minutes  
+**Status:** ✅ Completed on February 21, 2026
+**Execution Time:**~20 minutes
 **Files Updated:** 9 files modified, 1 file added (uv.lock)
 
 ### 2.1 Update `pyproject.toml` ✅
@@ -195,31 +195,31 @@ Issues = "https://github.com/apiarya/wemo-mcp-server/issues"
 ✅ **Completed** - Version tags simplified from `mcp-v*` to `v*` format
 
 **RELEASE.md:**
-✅ Updated all 4 GitHub URL references  
-✅ Removed `/mcp` subdirectory paths  
-✅ Changed tag format from `mcp-v*` to `v*`  
+✅ Updated all 4 GitHub URL references
+✅ Removed `/mcp` subdirectory paths
+✅ Changed tag format from `mcp-v*` to `v*`
 ✅ Updated workflow monitoring URLs
 
 **RELEASE_CHECKLIST.md:**
-✅ Updated repo name to `apiarya/wemo-mcp-server`  
-✅ Updated release URL  
-✅ Removed all `mcp/` path prefixes from commands  
+✅ Updated repo name to `apiarya/wemo-mcp-server`
+✅ Updated release URL
+✅ Removed all `mcp/` path prefixes from commands
 ✅ Simplified tag format from `mcp-vX.X.X` to `vX.X.X`
 
 **MCP_REGISTRY_SUBMISSION.md:**
-✅ Updated instructions for new repo owner  
-✅ Added namespace considerations section  
-✅ Documented options for registry namespace (qrussell vs apiarya)  
+✅ Updated instructions for new repo owner
+✅ Added namespace considerations section
+✅ Documented options for registry namespace (qrussell vs apiarya)
 ✅ Removed `/mcp` subdirectory references
 
 ### 2.5 Additional Changes ✅
 
 **.gitignore:**
-✅ Updated to allow `uv.lock` in version control  
+✅ Updated to allow `uv.lock` in version control
 ✅ Added comment: "Keep in version control for reproducible builds"
 
 **uv.lock:**
-✅ Copied from original mcp/ directory (285KB)  
+✅ Copied from original mcp/ directory (285KB)
 ✅ Added to version control for dependency pinning
 
 ### Results Summary
@@ -237,8 +237,8 @@ Issues = "https://github.com/apiarya/wemo-mcp-server/issues"
 **Files Added:** 1
 - `uv.lock`
 
-**Commit:** `5ed36f9`  
-**Lines Changed:** +1484 insertions, -44 deletions  
+**Commit:** `5ed36f9`
+**Lines Changed:** +1484 insertions, -44 deletions
 **Pushed to:** https://github.com/apiarya/wemo-mcp-server (main branch)
 
 **View Changes:** https://github.com/apiarya/wemo-mcp-server/commit/5ed36f9
@@ -247,8 +247,8 @@ Issues = "https://github.com/apiarya/wemo-mcp-server/issues"
 
 ## Phase 3: Setup CI/CD & Automation ⚙️ ✅ COMPLETED
 
-**Status:** ✅ Completed on February 21, 2026  
-**Execution Time:** ~15 minutes  
+**Status:** ✅ Completed on February 21, 2026
+**Execution Time:** ~15 minutes
 **Files Created:** 2 new files in `.github/`
 
 ### 3.1 Create GitHub Actions Workflow ✅
@@ -341,8 +341,8 @@ Trusted Publishing eliminates the need for `PYPI_API_TOKEN` secret.
 - ✅ Release summary in GitHub Actions
 - ✅ Manual trigger option for testing
 
-**Commit:** `e496317`  
-**Lines Added:** +232 insertions  
+**Commit:** `e496317`
+**Lines Added:** +232 insertions
 **Pushed to:** https://github.com/apiarya/wemo-mcp-server (main branch)
 
 **View Changes:** https://github.com/apiarya/wemo-mcp-server/commit/e496317
@@ -940,7 +940,7 @@ curl -s "https://registry.modelcontextprotocol.io/v0.1/servers?search=wemo"
 ```
 
 **For Users:**
-- ✅ New namespace: `io.github.apiarya/wemo`  
+- ✅ New namespace: `io.github.apiarya/wemo`
 - ✅ Installation unchanged: `pip install wemo-mcp-server`
 - ✅ Both registry entries work (old for compatibility, new for latest)
 - ✅ All features identical between v1.1.0 and v1.1.1
@@ -997,11 +997,11 @@ curl -s "https://registry.modelcontextprotocol.io/v0.1/servers?search=wemo"
 ## Critical Considerations
 
 ### 1. PyPI Ownership
-**Status:** Verify maintainer/owner access to `wemo-mcp-server` on PyPI  
+**Status:** Verify maintainer/owner access to `wemo-mcp-server` on PyPI
 **Action Required:** Ensure @apiarya has publish rights or setup trusted publishing
 
 ### 2. Registry Namespace
-**Current:** `io.github.qrussell/wemo`  
+**Current:** `io.github.qrussell/wemo`
 **Options:**
 - Transfer to `io.github.apiarya/wemo`
 - Keep as `io.github.qrussell/wemo` with qrussell republishing from new repo
@@ -1010,25 +1010,25 @@ curl -s "https://registry.modelcontextprotocol.io/v0.1/servers?search=wemo"
 **Recommendation:** Coordinate with @qrussell before registry publish
 
 ### 3. Version Strategy
-**Recommended:** Use `v1.1.0` to indicate "new home" milestone  
+**Recommended:** Use `v1.1.0` to indicate "new home" milestone
 **Rationale:**
 - Clear indication of significant change
 - Not a breaking change (minor version bump appropriate)
 - Users can track pre/post migration versions
 
 ### 4. Git History Preservation
-**Method:** Use `git filter-branch` or `git subtree` to preserve commit history  
+**Method:** Use `git filter-branch` or `git subtree` to preserve commit history
 **Value:**
 - Maintains contributor attribution
 - Preserves development history
 - Useful for understanding codebase evolution
 
 ### 5. Backward Compatibility
-**Guarantee:** All existing integrations must continue working  
+**Guarantee:** All existing integrations must continue working
 **Testing:** Verify with multiple MCP clients before announcing
 
 ### 6. Documentation Sync
-**Challenge:** Keep both repos' documentation in sync during transition  
+**Challenge:** Keep both repos' documentation in sync during transition
 **Solution:** Clear deprecation timeline and automatic redirects where possible
 
 ---
@@ -1177,6 +1177,6 @@ Migration is considered successful when:
 
 ---
 
-**Document Version:** 1.7  
-**Last Updated:** February 22, 2026 - 1:30 AM  
+**Document Version:** 1.7
+**Last Updated:** February 22, 2026 - 1:30 AM
 **Status:** ✅ ALL PHASES COMPLETE - Migration Successfully Finished!

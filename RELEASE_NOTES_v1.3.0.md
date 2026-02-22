@@ -1,7 +1,7 @@
 # Release Notes: WeMo MCP Server v1.3.0
 
-**Release Date**: February 21, 2026  
-**Type**: Feature Release  
+**Release Date**: February 21, 2026
+**Type**: Feature Release
 **Theme**: Production-Grade Enhancements
 
 ---

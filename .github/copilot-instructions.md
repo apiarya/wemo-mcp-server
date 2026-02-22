@@ -15,15 +15,15 @@
    # Must show: X passed, 0 failed
    ```
    - This takes ~5 seconds. There is no acceptable reason to skip it.
-   - `--no-verify` only bypasses pre-commit hooks — it does NOT run tests. You must run them explicitly.
+   - Do NOT use `--no-verify`. Pre-commit hooks run black, ruff, mypy, and pytest automatically.
    - If a test fails, fix the test or the code before committing. Do not commit broken tests.
 
-2. **Run linting** and confirm it passes:
+2. Only after the test suite passes, commit normally (no `--no-verify`):
    ```bash
-   .venv/bin/python -m ruff check src/ tests/
+   git commit -m "your message"
    ```
-
-3. Only after both pass, proceed with `git commit --no-verify`.
+   The pre-commit hooks will run black, ruff, mypy, and pytest automatically.
+   If any hook fails, fix the issue and retry.
 
 ### BEFORE EVERY `git push` — always ask the user first
 
@@ -552,20 +552,15 @@ ruff check src/ tests/ --fix
 # 1. Make code changes
 vim src/wemo_mcp_server/server.py
 
-# 2. Auto-fix formatting
-black src/ tests/ && isort src/ tests/
+# 2. Run tests first (fast check before committing)
+.venv/bin/python -m pytest tests/test_server.py tests/test_phase2.py tests/test_models.py -q --tb=short
 
-# 3. Run full validation
-./scripts/validate.sh
-
-# 4. If all checks pass, commit
+# 3. Commit — pre-commit hooks run automatically (black, ruff, mypy, pytest)
 git add -A
-git commit --no-verify -m "Your commit message"
+git commit -m "Your commit message"
+# Hooks auto-fix formatting; if they modify files, stage and commit again
 
-# 5. Run validation again before push
-./scripts/validate.sh
-
-# 6. Push (after user confirmation)
+# 4. Push (after user confirmation)
 git push origin main
 ```
 
@@ -594,7 +589,7 @@ Before executing `git push`:
    ```bash
    # See commits that will be pushed
    git log origin/main..HEAD --oneline
-   
+
    # See all changes that will be pushed
    git diff origin/main..HEAD
    ```
@@ -615,7 +610,7 @@ Before executing `git push`:
    ```bash
    # User says yes
    git push origin main
-   
+
    # User says no
    # Explain what needs to be fixed and wait for next instruction
    ```

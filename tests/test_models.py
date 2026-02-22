@@ -2,7 +2,6 @@
 
 import pytest
 from pydantic import ValidationError
-
 from wemo_mcp_server.models import (
     ControlDeviceParams,
     DeviceIdentifierParam,

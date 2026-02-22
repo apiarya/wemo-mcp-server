@@ -271,12 +271,12 @@ ruff check src/ tests/
    ```python
    def my_function(param: str) -> int:
        """Brief description.
-       
+
        Longer description if needed.
-       
+
        Args:
            param: Description of param
-           
+
        Returns:
            Description of return value
        """

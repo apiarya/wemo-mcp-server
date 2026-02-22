@@ -63,7 +63,7 @@ body:
       placeholder: |
         # Example prompt to MCP client:
         "Turn on all lights in the living room"
-        
+
         # Expected behavior:
         Server scans for devices, finds all living room devices, turns them on
       render: markdown

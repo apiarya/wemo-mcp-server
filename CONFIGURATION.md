@@ -110,7 +110,7 @@ logging:
 
 ### Network Settings
 
-#### `default_subnet` 
+#### `default_subnet`
 - **Environment**: `WEMO_MCP_DEFAULT_SUBNET`
 - **Default**: `192.168.1.0/24`
 - **Format**: CIDR notation (e.g., `192.168.1.0/24`, `10.0.0.0/16`)
@@ -144,7 +144,7 @@ logging:
   - Reduce if experiencing network issues
 
 #### `retry_attempts`
-- **Environment**: `WEMO_MCP_RETRY_ATTEMPTS` 
+- **Environment**: `WEMO_MCP_RETRY_ATTEMPTS`
 - **Default**: `3`
 - **Range**: `1` - `10`
 - **Description**: Number of retry attempts for device operations
@@ -279,7 +279,7 @@ Scan multiple networks (requires multiple scans):
 # First subnet
 claude chat "Scan 192.168.1.0/24 for devices"
 
-# Second subnet  
+# Second subnet
 claude chat "Scan 10.0.0.0/16 for devices"
 
 # Results are merged in cache
@@ -300,7 +300,7 @@ claude chat "Scan 10.0.0.0/16 for devices"
    ifconfig | grep "inet "
    # or
    ip addr show
-   
+
    # Use correct subnet
    export WEMO_MCP_DEFAULT_SUBNET="your.subnet.0/24"
    ```

@@ -1,14 +1,14 @@
 # WeMo MCP Server - Comprehensive Improvement Plan
 
-**Generated**: February 21, 2026  
-**Current Version**: v1.2.0  
+**Generated**: February 21, 2026
+**Current Version**: v1.2.0
 **Project Health**: Production-ready, professionally structured
 
 ## Executive Summary
 
 ### Current State
 - **Code**: 1,334 lines across 6 Python files
-- **Tests**: 15 unit tests + 6 E2E tests  
+- **Tests**: 15 unit tests + 6 E2E tests
 - **Coverage**: ~45% (estimated, not measured)
 - **Quality**: GitHub 6/6 community standards ✅
 - **Status**: Production-ready, published on PyPI & MCP Registry
@@ -299,7 +299,7 @@ class ScanNetworkParams(BaseModel):
         le=200,
         description="Maximum concurrent workers"
     )
-    
+
     @field_validator('subnet')
     @classmethod
     def validate_subnet(cls, v: str) -> str:
@@ -483,7 +483,7 @@ def test_cache_lookup_performance(benchmark):
     # Populate cache with 100 devices
     for i in range(100):
         _device_cache[f"device_{i}"] = mock_device()
-    
+
     result = benchmark(lambda: _device_cache.get("device_50"))
     assert result is not None
 
@@ -527,13 +527,13 @@ from typing import Dict, Any, Optional
 
 class DeviceCache:
     """Persistent device cache with expiration."""
-    
+
     def __init__(self, cache_file: Path, ttl: int = 3600):
         self.cache_file = cache_file
         self.ttl = ttl  # Time to live in seconds
         self._cache: Dict[str, Dict[str, Any]] = {}
         self.load()
-    
+
     def load(self) -> None:
         """Load cache from disk."""
         if self.cache_file.exists():
@@ -545,20 +545,20 @@ class DeviceCache:
                     k: v for k, v in data.items()
                     if now - v.get('timestamp', 0) < self.ttl
                 }
-    
+
     def save(self) -> None:
         """Save cache to disk."""
         self.cache_file.parent.mkdir(parents=True, exist_ok=True)
         with open(self.cache_file, 'w') as f:
             json.dump(self._cache, f, indent=2)
-    
+
     def get(self, key: str) -> Optional[Any]:
         """Get device from cache."""
         entry = self._cache.get(key)
         if entry and time.time() - entry['timestamp'] < self.ttl:
             return entry['device']
         return None
-    
+
     def set(self, key: str, device: Any) -> None:
         """Add device to cache."""
         self._cache[key] = {
@@ -566,7 +566,7 @@ class DeviceCache:
             'timestamp': time.time()
         }
         self.save()
-    
+
     def clear_expired(self) -> int:
         """Remove expired entries."""
         now = time.time()
@@ -598,7 +598,7 @@ class Settings(BaseSettings):
     cache_dir: Path = Path.home() / ".cache" / "wemo-mcp"
     cache_ttl: int = 3600  # 1 hour
     cache_enabled: bool = True
-    
+
     class Config:
         env_prefix = "WEMO_"
         env_file = ".env"
@@ -636,31 +636,31 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """WeMo MCP Server configuration."""
-    
+
     # Network scanning
     default_subnet: str = "192.168.1.0/24"
     scan_timeout: float = 0.6
     max_workers: int = 60
     wemo_ports: List[int] = [49152, 49153, 49154, 49155]
-    
+
     # Caching
     cache_enabled: bool = True
     cache_dir: Path = Path.home() / ".cache" / "wemo-mcp"
     cache_ttl: int = 3600
-    
+
     # Logging
     log_level: str = "INFO"
     log_format: str = "json"  # or "text"
-    
+
     # Performance
     retry_attempts: int = 3
     retry_base_delay: float = 0.5
     retry_max_delay: float = 10.0
-    
+
     # Features
     enable_device_monitoring: bool = False
     enable_event_subscriptions: bool = False
-    
+
     model_config = SettingsConfigDict(
         env_prefix="WEMO_",
         env_file=".env",
@@ -730,7 +730,7 @@ class DeviceConnectionPool:
     def __init__(self, max_size: int = 10):
         self.pool: Dict[str, Any] = {}
         self.max_size = max_size
-    
+
     async def get_connection(self, device_ip: str):
         """Get or create device connection."""
         if device_ip not in self.pool:
@@ -752,20 +752,20 @@ def cached_with_ttl(ttl: int = 60):
     def decorator(func):
         cache = {}
         timestamps = {}
-        
+
         @wraps(func)
         async def wrapper(*args, **kwargs):
             key = str(args) + str(kwargs)
             now = time.time()
-            
+
             if key in cache and now - timestamps[key] < ttl:
                 return cache[key]
-            
+
             result = await func(*args, **kwargs)
             cache[key] = result
             timestamps[key] = now
             return result
-        
+
         return wrapper
     return decorator
 
@@ -804,25 +804,25 @@ import asyncio
 
 class DeviceEventManager:
     """Manage device event subscriptions."""
-    
+
     def __init__(self):
         self.subscriptions: Dict[str, Callable] = {}
         self._running = False
-    
+
     async def subscribe(self, device: Any, callback: Callable) -> None:
         """Subscribe to device state changes."""
         device_id = f"{device.host}:{device.port}"
         self.subscriptions[device_id] = callback
-        
+
         # pywemo subscription
         device.register_callback(lambda: self._handle_event(device_id))
-    
+
     async def _handle_event(self, device_id: str) -> None:
         """Handle device event."""
         callback = self.subscriptions.get(device_id)
         if callback:
             await callback(device_id)
-    
+
     async def unsubscribe(self, device: Any) -> None:
         """Unsubscribe from device events."""
         device_id = f"{device.host}:{device.port}"
@@ -1059,12 +1059,12 @@ from typing import Dict
 
 class RateLimiter:
     """Simple rate limiter for device commands."""
-    
+
     def __init__(self, max_requests: int = 10, window: int = 60):
         self.max_requests = max_requests
         self.window = window
         self.requests: Dict[str, list] = defaultdict(list)
-    
+
     def is_allowed(self, device_id: str) -> bool:
         """Check if request is allowed."""
         now = time.time()
@@ -1073,7 +1073,7 @@ class RateLimiter:
             t for t in self.requests[device_id]
             if now - t < self.window
         ]
-        
+
         if len(self.requests[device_id]) < self.max_requests:
             self.requests[device_id].append(now)
             return True
@@ -1118,15 +1118,15 @@ from typing import Any, Dict
 
 class StructuredLogger:
     """Structured JSON logger for MCP server."""
-    
+
     def __init__(self, name: str, level: str = "INFO"):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(getattr(logging, level))
-        
+
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(self.JSONFormatter())
         self.logger.addHandler(handler)
-    
+
     class JSONFormatter(logging.Formatter):
         """Format logs as JSON."""
         def format(self, record: logging.LogRecord) -> str:
@@ -1139,25 +1139,25 @@ class StructuredLogger:
                 "function": record.funcName,
                 "line": record.lineno,
             }
-            
+
             # Add extra fields if present
             if hasattr(record, "extra"):
                 log_data.update(record.extra)
-            
+
             # Add exception info if present
             if record.exc_info:
                 log_data["exception"] = self.formatException(record.exc_info)
-            
+
             return json.dumps(log_data)
-    
+
     def info(self, message: str, **kwargs: Any) -> None:
         """Log info message with context."""
         self.logger.info(message, extra=kwargs)
-    
+
     def error(self, message: str, **kwargs: Any) -> None:
         """Log error message with context."""
         self.logger.error(message, extra=kwargs)
-    
+
     def warning(self, message: str, **kwargs: Any) -> None:
         """Log warning message with context."""
         self.logger.warning(message, extra=kwargs)
@@ -1203,34 +1203,34 @@ from typing import Dict, List
 @dataclass
 class Metrics:
     """Runtime metrics collector."""
-    
+
     # Counters
     scans_total: int = 0
     devices_discovered: int = 0
     commands_sent: int = 0
     commands_failed: int = 0
-    
+
     # Timing
     scan_durations: List[float] = field(default_factory=list)
     command_durations: List[float] = field(default_factory=list)
-    
+
     # Cache
     cache_hits: int = 0
     cache_misses: int = 0
-    
+
     def record_scan(self, duration: float, device_count: int) -> None:
         """Record scan metrics."""
         self.scans_total += 1
         self.devices_discovered += device_count
         self.scan_durations.append(duration)
-    
+
     def record_command(self, duration: float, success: bool) -> None:
         """Record command metrics."""
         self.commands_sent += 1
         if not success:
             self.commands_failed += 1
         self.command_durations.append(duration)
-    
+
     def get_stats(self) -> Dict:
         """Get current statistics."""
         return {
@@ -1286,7 +1286,7 @@ async def get_device_resource(device_id: str) -> Dict[str, Any]:
     device = _device_cache.get(device_id)
     if not device:
         raise ValueError(f"Device {device_id} not found")
-    
+
     return {
         "uri": f"device://{device_id}",
         "name": device.name,
@@ -1337,12 +1337,12 @@ async def scan_multiple_networks(
         for subnet in subnets
     ]
     results = await asyncio.gather(*tasks, return_exceptions=True)
-    
+
     all_devices = []
     for result in results:
         if isinstance(result, dict) and "devices" in result:
             all_devices.extend(result["devices"])
-    
+
     return {
         "subnets_scanned": len(subnets),
         "total_devices": len(all_devices),
@@ -1373,7 +1373,7 @@ import threading
 
 class MockWeMoDevice:
     """Simulated WeMo device for testing."""
-    
+
     def __init__(self, name: str, device_type: str, port: int):
         self.name = name
         self.type = device_type
@@ -1381,7 +1381,7 @@ class MockWeMoDevice:
         self.state = 0
         self.brightness = 50
         self.server = None
-    
+
     def start(self):
         """Start HTTP server."""
         handler = self._create_handler()
@@ -1389,16 +1389,16 @@ class MockWeMoDevice:
         thread = threading.Thread(target=self.server.serve_forever)
         thread.daemon = True
         thread.start()
-    
+
     def stop(self):
         """Stop HTTP server."""
         if self.server:
             self.server.shutdown()
-    
+
     def _create_handler(self):
         """Create HTTP request handler."""
         device = self
-        
+
         class DeviceHandler(BaseHTTPRequestHandler):
             def do_GET(self):
                 if self.path == '/setup.xml':
@@ -1406,13 +1406,13 @@ class MockWeMoDevice:
                     self.send_header('Content-Type', 'text/xml')
                     self.end_headers()
                     self.wfile.write(device._get_setup_xml().encode())
-            
+
             def do_POST(self):
                 # Handle SOAP requests
                 pass
-        
+
         return DeviceHandler
-    
+
     def _get_setup_xml(self):
         """Generate setup.xml response."""
         return f'''<?xml version="1.0"?>
@@ -1631,21 +1631,21 @@ def mock_wemo_network():
 
 This improvement plan transforms the WeMo MCP Server from a production-ready project to a **best-in-class** MCP implementation with:
 
-✅ **World-class quality**: 85%+ test coverage, automated checks  
-✅ **Exceptional performance**: Optimized scanning, caching, parallelization  
-✅ **Professional architecture**: Modular, maintainable, well-documented  
-✅ **Production-grade security**: Hardened, audited, rate-limited  
-✅ **Outstanding UX**: Configurable, fast, reliable  
+✅ **World-class quality**: 85%+ test coverage, automated checks
+✅ **Exceptional performance**: Optimized scanning, caching, parallelization
+✅ **Professional architecture**: Modular, maintainable, well-documented
+✅ **Production-grade security**: Hardened, audited, rate-limited
+✅ **Outstanding UX**: Configurable, fast, reliable
 
-**Estimated Timeline**: 14-16 weeks for complete implementation  
-**Effort**: ~200 hours total development time  
-**Team Size**: 1-2 developers  
+**Estimated Timeline**: 14-16 weeks for complete implementation
+**Effort**: ~200 hours total development time
+**Team Size**: 1-2 developers
 **Risk Level**: Low (incremental improvements)
 
 **Next Steps**: Review and approve this plan, then begin Sprint 1 immediately.
 
 ---
 
-**Last Updated**: February 21, 2026  
-**Version**: 1.0  
+**Last Updated**: February 21, 2026
+**Version**: 1.0
 **Status**: Awaiting approval
