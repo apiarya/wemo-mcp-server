@@ -5,6 +5,20 @@ All notable changes to the WeMo MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-02-21
+
+### Fixed
+- 🐛 **Cache not used after server restart** - All device-lookup tools now auto-reconnect
+  to devices via the persistent JSON cache on restart, eliminating forced rescans
+  (`get_device_status`, `control_device`, `rename_device`, `get_homekit_code`)
+- 🐛 **`list_devices` ignores file cache on restart** - Falls back to `~/.wemo_mcp_cache.json`
+  when in-memory cache is empty; includes note indicating devices loaded from file cache
+- 🐛 **Misleading `cache_keys` in `list_devices` response** - Removed raw key count
+  (always 2× device_count due to name+IP dual-indexing) which caused AI to report
+  a false discrepancy; `device_count` is now the only count field
+
+---
+
 ## [1.3.0] - 2026-02-21
 
 ### 🚀 Phase 2: Production-Grade Features
