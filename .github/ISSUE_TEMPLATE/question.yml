@@ -1,0 +1,104 @@
+name: ❓ Question / Help
+description: Ask a question or get help with usage
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question? We're here to help! 
+        
+        For general discussions, consider using [GitHub Discussions](https://github.com/apiarya/wemo-mcp-server/discussions) instead.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Before asking, please check
+      options:
+        - label: I have read the [documentation](https://github.com/apiarya/wemo-mcp-server/blob/main/README.md)
+          required: true
+        - label: I have searched existing issues and discussions
+          required: true
+        - label: My question is specifically about wemo-mcp-server
+          required: true
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      description: What is your question about?
+      options:
+        - Installation / Setup
+        - Configuration
+        - MCP Client Integration
+        - Device Discovery
+        - Device Control
+        - Troubleshooting
+        - Best Practices
+        - Development / Contributing
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: Ask your question as clearly as possible
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to accomplish?
+      placeholder: Describe your use case or what you're trying to do
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What Have You Tried?
+      description: What have you already attempted?
+      placeholder: |
+        - Read the README
+        - Tried configuration X
+        - Searched for similar issues
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version are you using?
+      placeholder: "e.g., 1.1.1"
+
+  - type: dropdown
+    id: mcp-client
+    attributes:
+      label: MCP Client
+      description: Which client are you using (if applicable)?
+      options:
+        - N/A
+        - Claude Desktop
+        - VS Code
+        - Cursor
+        - Other
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Relevant environment details
+      placeholder: |
+        - OS: [e.g., macOS, Windows, Linux]
+        - Python version: [if relevant]  
+        - Installation method: [pip, uvx, etc.]
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information
+      description: Anything else that might be helpful
+      placeholder: Configuration snippets, error messages, etc.
