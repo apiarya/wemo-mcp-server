@@ -5,6 +5,53 @@ All notable changes to the WeMo MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-02-21
+
+### 🏠 Repository Migration - New Home!
+
+The WeMo MCP Server has been migrated to its own dedicated repository for better discoverability and to comply with MCP Registry requirements.
+
+**New Repository:** https://github.com/apiarya/wemo-mcp-server
+
+### Changed
+- 🏗️ **Repository structure** - Now a standalone repository (was `/mcp` subdirectory in monorepo)
+- 🔖 **Version tags** - Simplified from `mcp-v*` to `v*` format (e.g., `v1.1.0`)
+- 📦 **Package ownership** - Transferred to @apiarya for maintenance
+- 🔧 **CI/CD pipeline** - Updated for standalone repository structure
+- 🌐 **Repository URLs** - All references updated to new location
+- 📝 **Documentation** - Updated with new repository links and structure
+
+### Added
+- 🔒 **uv.lock** - Added to version control for reproducible builds (285KB)
+- 🤖 **GitHub Actions** - Automated PyPI publishing with Trusted Publishing (OIDC)
+- 📋 **PYPI_PUBLISHING.md** - Comprehensive release and publishing documentation
+- 🔄 **Workflow automation** - Automatic PyPI publish on GitHub release
+
+### Why This Move?
+1. **MCP Registry Compliance** - Registry requires base repository URLs without path components
+2. **Better Discoverability** - Users from registry land directly on MCP documentation  
+3. **Industry Standards** - Aligns with patterns used by major MCP servers (GitHub, Cloudflare)
+4. **Clearer Separation** - Reduces confusion between desktop app and MCP server releases
+
+### Migration Details
+- **Git History** - Full commit history preserved (15 commits migrated)
+- **Tags Migrated** - All historical tags including `mcp-v0.1.0`, `mcp-v1.0.0`, `mcp-v1.0.1`
+- **No Breaking Changes** - Installation commands remain identical
+- **Package Name** - Unchanged: `wemo-mcp-server` on PyPI
+
+### For Users
+**No action needed!** Install or upgrade as usual:
+```bash
+pip install --upgrade wemo-mcp-server
+# or
+uvx wemo-mcp-server@latest
+```
+
+### For Contributors
+- **Issues:** https://github.com/apiarya/wemo-mcp-server/issues
+- **Pull Requests:** https://github.com/apiarya/wemo-mcp-server/pulls
+- **Related Project:** [WeMo Ops Center](https://github.com/qrussell/wemo-ops-center) (desktop & server applications)
+
 ## [1.0.1] - 2026-02-16
 
 ### Fixed
@@ -61,6 +108,7 @@ This patch release enables successful publication to the official MCP Registry a
 - MCP server implementation
 - PyPI packaging setup
 
+[1.1.0]: https://github.com/apiarya/wemo-mcp-server/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/apiarya/wemo-mcp-server/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/apiarya/wemo-mcp-server/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/apiarya/wemo-mcp-server/releases/tag/v0.1.0
