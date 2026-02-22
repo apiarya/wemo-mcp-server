@@ -3,6 +3,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
+
 from wemo_mcp_server.server import WeMoScanner, extract_device_info
 
 
@@ -106,7 +107,7 @@ class TestExtractDeviceInfo:
 class TestDeviceCache:
     """Tests for device caching functionality."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_device_cache_structure(self):
         """Test that device cache has correct structure."""
         from wemo_mcp_server.server import _device_cache
@@ -115,7 +116,7 @@ class TestDeviceCache:
         assert isinstance(_device_cache, dict)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestAsyncFunctions:
     """Tests for async MCP tool functions."""
 
@@ -249,7 +250,7 @@ class TestWeMoScannerScan:
 class TestMCPToolsHappyPath:
     """Tests for MCP tools with successful device interactions."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_network_with_devices(self):
         """Test scan_network successfully finds and caches devices."""
         from wemo_mcp_server.server import _device_cache, scan_network
@@ -278,7 +279,7 @@ class TestMCPToolsHappyPath:
             assert "Test Switch" in _device_cache
             assert _device_cache["Test Switch"] == mock_device
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_list_devices_with_populated_cache(self):
         """Test list_devices with multiple devices in cache."""
         from wemo_mcp_server.server import _device_cache, list_devices
@@ -311,7 +312,7 @@ class TestMCPToolsHappyPath:
         assert "Living Room" in device_names
         assert "Bedroom" in device_names
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_get_device_status_success(self):
         """Test get_device_status with successful device query."""
         from wemo_mcp_server.server import _device_cache, get_device_status
@@ -334,7 +335,7 @@ class TestMCPToolsHappyPath:
         assert result["state"] == "on"
         assert result["is_dimmer"] is False
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_get_device_status_with_dimmer(self):
         """Test get_device_status with a dimmer device."""
         from wemo_mcp_server.server import _device_cache, get_device_status
@@ -356,7 +357,7 @@ class TestMCPToolsHappyPath:
         assert result["is_dimmer"] is True
         assert result["brightness"] == 75
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_control_device_turn_on(self):
         """Test control_device turning a device on."""
         from wemo_mcp_server.server import _device_cache, control_device
@@ -378,7 +379,7 @@ class TestMCPToolsHappyPath:
         assert result["new_state"] == "on"
         mock_device.on.assert_called_once()
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_control_device_turn_off(self):
         """Test control_device turning a device off."""
         from wemo_mcp_server.server import _device_cache, control_device
@@ -399,7 +400,7 @@ class TestMCPToolsHappyPath:
         assert result["new_state"] == "off"
         mock_device.off.assert_called_once()
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_control_device_toggle(self):
         """Test control_device toggling a device."""
         from wemo_mcp_server.server import _device_cache, control_device
@@ -419,7 +420,7 @@ class TestMCPToolsHappyPath:
         assert result["action_performed"] == "toggle"
         mock_device.toggle.assert_called_once()
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_control_device_brightness_dimmer(self):
         """Test control_device setting brightness on a dimmer."""
         from wemo_mcp_server.server import _device_cache, control_device
@@ -441,7 +442,7 @@ class TestMCPToolsHappyPath:
         assert result["is_dimmer"] is True
         mock_device.set_brightness.assert_called_once_with(50)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_control_device_brightness_non_dimmer(self):
         """Test control_device brightness action on non-dimmer device."""
         from wemo_mcp_server.server import _device_cache, control_device
@@ -462,7 +463,7 @@ class TestMCPToolsHappyPath:
         assert "error" in result
         assert "not a dimmer" in result["error"].lower()
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_rename_device_success(self):
         """Test rename_device successfully renames a device."""
         from wemo_mcp_server.server import _device_cache, rename_device
@@ -488,7 +489,7 @@ class TestMCPToolsHappyPath:
         assert "New Name" in _device_cache
         assert "Old Name" not in _device_cache
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_rename_device_empty_name(self):
         """Test rename_device with empty new name."""
         from wemo_mcp_server.server import rename_device
@@ -500,7 +501,7 @@ class TestMCPToolsHappyPath:
         assert "Invalid parameters" in result["error"]
         assert "validation_errors" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_rename_device_not_found(self):
         """Test rename_device with non-existent device."""
         from wemo_mcp_server.server import _device_cache, rename_device
@@ -513,7 +514,7 @@ class TestMCPToolsHappyPath:
         assert "error" in result
         assert "not found" in result["error"].lower()
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_get_homekit_code_success(self):
         """Test get_homekit_code successfully retrieves code."""
         from wemo_mcp_server.server import _device_cache, get_homekit_code
@@ -535,7 +536,7 @@ class TestMCPToolsHappyPath:
         assert result["homekit_code"] == "123-45-678"
         assert result["device_name"] == "HomeKit Device"
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_get_homekit_code_not_supported(self):
         """Test get_homekit_code with device that doesn't support HomeKit."""
         from wemo_mcp_server.server import _device_cache, get_homekit_code
@@ -555,7 +556,7 @@ class TestMCPToolsHappyPath:
         assert "error" in result
         assert "does not support HomeKit" in result["error"]
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_get_homekit_code_no_code_available(self):
         """Test get_homekit_code when device has no HomeKit code."""
         from wemo_mcp_server.server import _device_cache, get_homekit_code
