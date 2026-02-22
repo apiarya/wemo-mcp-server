@@ -2,7 +2,7 @@
 
 Control WeMo smart home devices through AI assistants using natural language.
 
-**mcp-name: io.github.qrussell/wemo**
+**mcp-name: io.github.apiarya/wemo**
 
 [![MCP](https://img.shields.io/badge/MCP-Server-blue)](https://modelcontextprotocol.io)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-Registered-green)](https://registry.modelcontextprotocol.io/?q=wemo)

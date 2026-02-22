@@ -48,6 +48,10 @@ htmlcov/
 
 # Package managers
 # uv.lock - Keep in version control for reproducible builds
+
+# MCP Registry tokens
+.mcpregistry_github_token
+.mcpregistry_registry_token
 poetry.lock
 Pipfile.lock
 
