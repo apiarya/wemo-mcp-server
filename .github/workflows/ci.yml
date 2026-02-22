@@ -1,4 +1,4 @@
-name: CI: Tests & Quality Checks
+name: "CI: Tests & Quality Checks"
 
 on:
   push:
