@@ -4,12 +4,14 @@ Control WeMo smart home devices through AI assistants using natural language.
 
 **mcp-name: io.github.apiarya/wemo**
 
-[![MCP](https://img.shields.io/badge/MCP-Server-blue)](https://modelcontextprotocol.io)
-[![Transport](https://img.shields.io/badge/Transport-stdio-lightblue)](https://modelcontextprotocol.io/docs/concepts/transports)
-[![MCP Registry](https://img.shields.io/badge/MCP_Registry-Registered-green)](https://registry.modelcontextprotocol.io/?q=apiarya/wemo)
-
+[![CI](https://github.com/apiarya/wemo-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/apiarya/wemo-mcp-server/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/apiarya/wemo-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/apiarya/wemo-mcp-server)
 [![PyPI version](https://img.shields.io/pypi/v/wemo-mcp-server)](https://pypi.org/project/wemo-mcp-server/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-Registered-green)](https://registry.modelcontextprotocol.io/?q=apiarya/wemo)
+[![MCP](https://img.shields.io/badge/MCP-Tools%20%7C%20Resources%20%7C%20Prompts%20%7C%20Elicitations-blue)](https://modelcontextprotocol.io)
+[![Transport](https://img.shields.io/badge/Transport-stdio-lightblue)](https://modelcontextprotocol.io/docs/concepts/transports)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -30,6 +32,10 @@ Control WeMo smart home devices through AI assistants using natural language.
   - [get_cache_info](#7-get_cache_info)
   - [clear_cache](#8-clear_cache)
   - [get_configuration](#9-get_configuration)
+- [MCP Capabilities](#mcp-capabilities)
+  - [Resources](#resources)
+  - [Prompts](#prompts)
+  - [Elicitations](#elicitations)
 - [How It Works](#how-it-works)
 - [Feature Comparison](#feature-comparison)
 - [Development](#development)
@@ -59,6 +65,9 @@ Seamlessly integrate WeMo smart home devices with AI assistants through the Mode
 - **🔄 Auto-Retry** - Automatic retry with exponential backoff for network errors
 - **🛡️ Error Handling** - Detailed error messages with actionable suggestions
 - **🔌 Universal** - Works with any MCP client (Claude, VS Code, Cursor, etc.)
+- **📡 MCP Resources** - Live device state via `devices://` and `device://{id}` URIs
+- **💬 MCP Prompts** - Built-in guided prompts: discover, status report, scene control, troubleshoot
+- **🗣️ MCP Elicitations** - Interactive clarification when subnet or device name is ambiguous
 
 ---
 
@@ -494,6 +503,50 @@ Current Configuration:
 
 ---
 
+## MCP Capabilities
+
+Beyond tools, this server exposes the full suite of MCP primitives.
+
+### Resources
+
+Subscribe to live device data without calling a tool:
+
+| URI | Description |
+|-----|-------------|
+| `devices://` | JSON index of all cached devices |
+| `device://{name-or-ip}` | Live state for a specific device (URL-encoded name supported) |
+
+Clients that support MCP Resources (VS Code, MCP Inspector) can read these directly.
+
+### Prompts
+
+Four built-in guided prompts available via `/` slash commands in supporting clients:
+
+| Prompt | Description |
+|--------|-------------|
+| `discover-devices` | Guided network scan with subnet selection |
+| `device-status-report` | Summary report of all device states |
+| `activate-scene` | Control multiple devices as a scene |
+| `troubleshoot-device` | Step-by-step device troubleshooting |
+
+### Elicitations
+
+The server proactively asks for missing information rather than failing silently:
+
+- **`scan_network`** — if no custom subnet is configured (default `192.168.1.0/24`), asks which subnet to scan before proceeding
+- **`control_device`** — if a device name isn't found in cache, presents closest matches and asks which device was intended
+
+### Client Support Matrix
+
+| Feature | Claude Desktop | VS Code | Cursor | MCP Inspector |
+|---------|:--------------:|:-------:|:------:|:-------------:|
+| Tools | ✅ | ✅ | ✅ | ✅ |
+| Resources | ⚠️ protocol only | ✅ | ✅ | ✅ |
+| Prompts | ⚠️ no slash UI | ✅ `/` commands | ✅ | ✅ |
+| Elicitations | ✅ v1.1+ | ❌ | ❌ | ✅ v0.20+ |
+
+---
+
 ## How It Works
 
 ### Multi-Phase Discovery
@@ -564,11 +617,14 @@ uv sync --dev
 ### Running Tests
 
 ```bash
+# Unit tests (CI-compatible, ~4 seconds, 128 tests)
+.venv/bin/python -m pytest tests/test_server.py tests/test_phase2.py tests/test_models.py -v
+
+# With coverage report
+pytest tests/test_server.py tests/test_phase2.py tests/test_models.py --cov=wemo_mcp_server --cov-report=html
+
 # E2E tests (requires WeMo devices on network)
 python tests/test_e2e.py
-
-# Unit tests
-pytest tests/test_server.py -v
 ```
 
 ### Using Development Version

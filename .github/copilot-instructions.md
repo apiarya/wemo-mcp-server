@@ -45,7 +45,7 @@ A 5-second local test run would have caught it immediately.
 - **Repository**: https://github.com/apiarya/wemo-mcp-server
 - **Package**: `wemo-mcp-server` (PyPI)
 - **MCP Name**: `io.github.apiarya/wemo`
-- **Version**: v1.3.1 (stable)
+- **Version**: v1.4.0 (stable)
 - **Status**: Production • Published on PyPI and MCP Registry
 
 ## Project Type & Architecture
@@ -68,9 +68,9 @@ Natural language control of WeMo smart home devices through AI assistants:
 ```
 wemo-mcp-server/
 ├── src/wemo_mcp_server/
-│   ├── __init__.py          # Package init and version (__version__ = "1.3.1")
+│   ├── __init__.py          # Package init and version (__version__ = "1.4.0")
 │   ├── __main__.py          # Entry point for python -m wemo_mcp_server
-│   ├── server.py            # Main server (~1200 lines) - all MCP tools and logic
+│   ├── server.py            # Main server (~1570 lines) - tools, resources, prompts, elicitations
 │   ├── cache.py             # Persistent JSON device cache (DeviceCache)
 │   ├── config.py            # YAML + env var configuration management
 │   ├── error_handling.py    # Retry decorator + error classification
@@ -156,9 +156,23 @@ wemo-mcp-server/
 - 📈 **Better Maintainability**: Reduced complexity, clear structure
 - ✅ **Professional Standards**: CI/CD pipeline, comprehensive testing
 
-**Next Phase**: Phase 2 - Error handling, persistent cache, configuration management
+## Recent Improvements - Phase 3 Complete ✅
 
-## MCP Tools (6 Total) - server.py
+**MCP Primitives (v1.4.0)** - Completed February 22, 2026
+
+### New MCP Primitives
+- ✅ MCP Resources: `devices://` (static index) + `device://{device_id}` (live state, URL-decoded)
+- ✅ MCP Prompts: 4 guided prompts (discover-devices, device-status-report, activate-scene, troubleshoot-device)
+- ✅ MCP Elicitations: subnet confirmation in `scan_network` + device disambiguation in `control_device`
+
+### Infrastructure
+- ✅ CI/CD: multi-version (3.10–3.13), Dependabot weekly scans, pip-audit security checks
+- ✅ Branch protection: 6 required status checks, no force-push/delete, auto-merge enabled
+- ✅ Release gate: `release.yml` blocks publish if any CI check failed on the tagged commit
+- ✅ 128 tests across 3 test files, ~82% overall coverage
+- ✅ Release v1.4.0 published to PyPI + MCP Registry
+
+## MCP Tools (9 Total) - server.py
 All tools are async and decorated with `@mcp.tool()`:
 
 ### 1. `scan_network(subnet, timeout, max_workers)`
@@ -207,6 +221,37 @@ All tools are async and decorated with `@mcp.tool()`:
 - **Purpose**: View all current config settings
 - **Returns**: Network, cache, and logging settings with active values
 
+## MCP Resources (2 Total) - server.py
+Decorated with `@mcp.resource()`:
+
+### `devices://`
+- **Purpose**: Static JSON index of all devices in the in-memory cache
+- **Returns**: List of `{name, ip, type}` for every cached device
+
+### `device://{device_id}`
+- **Purpose**: Live state for a specific device (name or IP, URL-decoded)
+- **Returns**: Current state (on/off), brightness (if dimmer), model info
+
+## MCP Prompts (4 Total) - server.py
+Decorated with `@mcp.prompt()`:
+
+| Prompt | Description |
+|--------|-------------|
+| `discover-devices` | Guided network scan with subnet selection |
+| `device-status-report` | Full status summary of all cached devices |
+| `activate-scene` | Control multiple devices simultaneously as a scene |
+| `troubleshoot-device` | Step-by-step diagnostic for a non-responsive device |
+
+## MCP Elicitations
+Triggered automatically when context is ambiguous. Schemas defined in `server.py` lines 43–55:
+
+| Schema | Used by | Triggers when |
+|--------|---------|---------------|
+| `_SubnetChoiceSchema(subnet: str)` | `scan_network` | Default `192.168.1.0/24` with no `WEMO_MCP_DEFAULT_SUBNET` env override |
+| `_DeviceChoiceSchema(device_name: str)` | `control_device` | Device identifier not found in in-memory or file cache |
+
+**Client support**: Claude Desktop v1.1+ ✅ · MCP Inspector v0.20+ ✅ · VS Code ❌
+
 ## Development Guidelines
 
 ### Code Style
@@ -253,7 +298,7 @@ src/wemo_mcp_server/error_handling.py 100.00% coverage
 src/wemo_mcp_server/cache.py           96.34% coverage
 src/wemo_mcp_server/config.py          91.11% coverage
 src/wemo_mcp_server/models.py          86.05% coverage
-src/wemo_mcp_server/server.py          ~65% coverage
+src/wemo_mcp_server/server.py          ~57% coverage
 ──────────────────────────────────────────────────────
 TOTAL                                  ~81.88% coverage
 ```
@@ -768,4 +813,4 @@ Test prompts:
 
 ---
 
-**Last Updated**: February 21, 2026 (v1.3.1 + Phase 2 features + mandatory AI pre-commit rules)
+**Last Updated**: February 22, 2026 (v1.4.0 + MCP Resources, Prompts, Elicitations + mandatory AI pre-commit rules)
