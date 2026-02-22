@@ -39,6 +39,11 @@ mcp = FastMCP("wemo-mcp-server")
 # Global device cache to store discovered devices
 _device_cache: dict[str, Any] = {}  # key: device name or IP, value: pywemo device object
 
+# Module-level constants for repeated string literals (avoids S1192 duplication)
+DEFAULT_SUBNET = "192.168.1.0/24"
+ERR_INVALID_PARAMS = "Invalid parameters"
+ERR_RUN_SCAN_FIRST = "Run scan_network first to discover devices"
+
 
 # Elicitation schemas — lightweight Pydantic models used by ctx.elicit()
 class _DeviceChoiceSchema(BaseModel):
@@ -161,7 +166,7 @@ class WeMoScanner:
                 s.connect((str(ip), port))
                 s.close()
                 return str(ip)
-            except:
+            except Exception:
                 pass
             finally:
                 s.close()
@@ -395,8 +400,8 @@ async def scan_network(
 
     # Use config defaults if not provided
     if subnet is None:
-        config_subnet = config.get("network", "default_subnet", "192.168.1.0/24")
-        if config_subnet == "192.168.1.0/24" and ctx is not None:
+        config_subnet = config.get("network", "default_subnet", DEFAULT_SUBNET)
+        if config_subnet == DEFAULT_SUBNET and ctx is not None:
             # No custom subnet configured — ask the user rather than scanning the wrong network
             elicit_result = await ctx.elicit(
                 "No subnet is configured. Which subnet should I scan? "
@@ -421,7 +426,7 @@ async def scan_network(
         params = ScanNetworkParams(subnet=subnet, timeout=timeout, max_workers=max_workers)
     except ValidationError as e:
         return {
-            "error": "Invalid parameters",
+            "error": ERR_INVALID_PARAMS,
             "validation_errors": [
                 {"field": err["loc"][0], "message": err["msg"], "input": err["input"]}
                 for err in e.errors()
@@ -694,7 +699,7 @@ async def get_device_status(device_identifier: str) -> dict[str, Any]:
         param = DeviceIdentifierParam(device_identifier=device_identifier)
     except ValidationError as e:
         return {
-            "error": "Invalid parameters",
+            "error": ERR_INVALID_PARAMS,
             "validation_errors": [
                 {"field": err["loc"][0], "message": err["msg"], "input": err["input"]}
                 for err in e.errors()
@@ -710,7 +715,7 @@ async def get_device_status(device_identifier: str) -> dict[str, Any]:
         if not device:
             return {
                 "error": f"Device '{param.device_identifier}' not found in cache",
-                "suggestion": "Run scan_network first to discover devices",
+                "suggestion": ERR_RUN_SCAN_FIRST,
                 "available_devices": [
                     k
                     for k in _device_cache
@@ -982,7 +987,7 @@ async def control_device(
         )
     except ValidationError as e:
         return {
-            "error": "Invalid parameters",
+            "error": ERR_INVALID_PARAMS,
             "validation_errors": [
                 {"field": err["loc"][0], "message": err["msg"], "input": err["input"]}
                 for err in e.errors()
@@ -1023,7 +1028,7 @@ async def control_device(
             if not device:
                 return {
                     "error": f"Device '{params.device_identifier}' not found in cache",
-                    "suggestion": "Run scan_network first to discover devices",
+                    "suggestion": ERR_RUN_SCAN_FIRST,
                     "available_devices": available_names,
                     "success": False,
                 }
@@ -1105,7 +1110,7 @@ async def rename_device(device_identifier: str, new_name: str) -> dict[str, Any]
         )
     except ValidationError as e:
         return {
-            "error": "Invalid parameters",
+            "error": ERR_INVALID_PARAMS,
             "validation_errors": [
                 {"field": err["loc"][0], "message": err["msg"], "input": err["input"]}
                 for err in e.errors()
@@ -1122,7 +1127,7 @@ async def rename_device(device_identifier: str, new_name: str) -> dict[str, Any]
         if not device:
             return {
                 "error": f"Device '{params.device_identifier}' not found in cache",
-                "suggestion": "Run scan_network first to discover devices",
+                "suggestion": ERR_RUN_SCAN_FIRST,
                 "available_devices": [
                     k
                     for k in _device_cache
@@ -1213,7 +1218,7 @@ async def get_homekit_code(device_identifier: str) -> dict[str, Any]:
         param = DeviceIdentifierParam(device_identifier=device_identifier)
     except ValidationError as e:
         return {
-            "error": "Invalid parameters",
+            "error": ERR_INVALID_PARAMS,
             "validation_errors": [
                 {"field": err["loc"][0], "message": err["msg"], "input": err["input"]}
                 for err in e.errors()
@@ -1230,7 +1235,7 @@ async def get_homekit_code(device_identifier: str) -> dict[str, Any]:
         if not device:
             return {
                 "error": f"Device '{param.device_identifier}' not found in cache",
-                "suggestion": "Run scan_network first to discover devices",
+                "suggestion": ERR_RUN_SCAN_FIRST,
                 "available_devices": [
                     k
                     for k in _device_cache
@@ -1435,7 +1440,7 @@ async def get_device_resource(device_id: str) -> str:
 async def prompt_discover_devices() -> list[dict]:
     """Scan the network and report all discovered WeMo smart home devices."""
     config = get_config()
-    subnet = config.get("network", "default_subnet", "192.168.1.0/24")
+    subnet = config.get("network", "default_subnet", DEFAULT_SUBNET)
     return [
         {
             "role": "user",
