@@ -6,24 +6,24 @@
 - [ ] Enable 2FA on PyPI
 - [ ] Configure trusted publishing at https://pypi.org/manage/account/publishing/
   - Project: `wemo-mcp-server`
-  - Repo: `qrussell/wemo-ops-center`
+  - Repo: `apiarya/wemo-mcp-server`
   - Workflow: `pypi-publish.yml`
 
 ## For Each Release
 
 ### Preparation
-- [ ] Update version in `mcp/pyproject.toml` (line 7)
-- [ ] Update version in `mcp/src/wemo_mcp_server/__init__.py` (line 3)
-- [ ] Update `mcp/CHANGELOG.md` with release notes
-- [ ] Run tests: `cd mcp && pytest tests/ -v`
-- [ ] Test build: `cd mcp && python -m build && twine check dist/*`
+- [ ] Update version in `pyproject.toml` (line 7)
+- [ ] Update version in `src/wemo_mcp_server/__init__.py` (line 3)
+- [ ] Update `CHANGELOG.md` with release notes
+- [ ] Run tests: `pytest tests/ -v`
+- [ ] Test build: `python -m build && twine check dist/*`
 
 ### Release
 - [ ] Commit: `git commit -m "Release vX.X.X"`
 - [ ] Push: `git push origin main`
-- [ ] Tag: `git tag mcp-vX.X.X`
-- [ ] Push tag: `git push origin mcp-vX.X.X`
-- [ ] Create GitHub release at https://github.com/qrussell/wemo-ops-center/releases/new
+- [ ] Tag: `git tag vX.X.X` (no longer mcp-v prefix)
+- [ ] Push tag: `git push origin vX.X.X`
+- [ ] Create GitHub release at https://github.com/apiarya/wemo-mcp-server/releases/new
 - [ ] Wait for workflow to complete
 
 ### Verification

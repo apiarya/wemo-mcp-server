@@ -47,7 +47,7 @@ htmlcov/
 .hypothesis/
 
 # Package managers
-uv.lock
+# uv.lock - Keep in version control for reproducible builds
 poetry.lock
 Pipfile.lock
 

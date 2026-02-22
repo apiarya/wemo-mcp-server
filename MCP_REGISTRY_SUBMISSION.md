@@ -1,15 +1,19 @@
 # MCP Registry Submission Instructions
 
-## Status: Ready for qrussell to publish ✅
+## Status: Ready for Publication ✅
 
-The WeMo MCP Server v1.0.0 is ready for submission to the official MCP Registry. Since the package is published from the `qrussell/wemo-ops-center` repository, **@qrussell needs to complete the registry submission**.
+The WeMo MCP Server is ready for submission to the official MCP Registry from its new dedicated repository at `apiarya/wemo-mcp-server`.
 
-## Why qrussell needs to do this
+## Registry Namespace Considerations
 
-The MCP Registry validates namespace ownership:
-- Server name: `io.github.qrussell/wemo`
-- Only GitHub user `qrussell` can publish under `io.github.qrussell/*`
-- The PyPI package `wemo-mcp-server` is published from qrussell's GitHub Actions
+**Current Registration:** `io.github.qrussell/wemo` (from original repository)
+
+**Options for Migration:**
+1. **Transfer namespace** - Have @qrussell transfer `io.github.qrussell/wemo` ownership in registry (recommended for continuity)
+2. **New namespace** - Register as `io.github.apiarya/wemo` (cleaner separation)
+3. **Coordinate republish** - Have @qrussell republish from new repo location
+
+**Recommended:** Coordinate with @qrussell before publishing to determine best namespace approach.
 
 ## Steps for @qrussell
 
@@ -48,9 +52,8 @@ This will:
 ### 4. Navigate to the repo
 
 ```bash
-cd /path/to/wemo-ops-center
+cd /path/to/wemo-mcp-server
 git pull origin main
-cd mcp
 ```
 
 ### 5. Publish to MCP Registry
@@ -78,10 +81,10 @@ open https://registry.modelcontextprotocol.io/
 
 ## What's already configured
 
-✅ **server.json** - Registry metadata file ready in `mcp/server.json`
-✅ **PyPI package** - v1.0.0 published at https://pypi.org/project/wemo-mcp-server/
-✅ **GitHub release** - v1.0.0 tagged and released
-✅ **Documentation** - README and release docs updated
+✅ **server.json** - Registry metadata file ready in `server.json`
+✅ **PyPI package** - Published at https://pypi.org/project/wemo-mcp-server/
+✅ **GitHub releases** - Tags and releases in dedicated repository
+✅ **Documentation** - README and release docs updated for new repository
 
 ## Troubleshooting
 

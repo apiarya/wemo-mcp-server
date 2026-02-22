@@ -73,15 +73,15 @@ Trusted publishing uses GitHub OIDC tokens instead of API keys - more secure and
 
 1. **Create and push a tag**:
    ```bash
-   # Tag must start with 'mcp-v' to trigger PyPI workflow
-   git tag mcp-v1.0.0
-   git push origin mcp-v1.0.0
+   # Tag format: v* (no longer mcp-v*)
+   git tag v1.0.0
+   git push origin v1.0.0
    ```
 
 2. **Create GitHub Release**:
-   - Go to: https://github.com/qrussell/wemo-ops-center/releases/new
-   - Select tag: `mcp-v1.0.0`
-   - Release title: `MCP Server v1.0.0`
+   - Go to: https://github.com/apiarya/wemo-mcp-server/releases/new
+   - Select tag: `v1.0.0`
+   - Release title: `v1.0.0`
    - Description:
      ```markdown
      ## WeMo MCP Server v1.0.0
@@ -103,13 +103,13 @@ Trusted publishing uses GitHub OIDC tokens instead of API keys - more secure and
      - 🔌 Works with Claude Desktop, VS Code, and any MCP host
 
      ### Documentation
-     See [mcp/README.md](https://github.com/qrussell/wemo-ops-center/tree/main/mcp) for setup instructions.
+     See [README.md](https://github.com/apiarya/wemo-mcp-server/blob/main/README.md) for setup instructions.
      ```
    - Click **Publish release**
 
 3. **Monitor the workflow**:
-   - Go to: https://github.com/qrussell/wemo-ops-center/actions
-   - Watch the "Publish MCP Server to PyPI" workflow
+   - Go to: https://github.com/apiarya/wemo-mcp-server/actions
+   - Watch the "Publish to PyPI" workflow
    - If it fails, check the logs and fix issues
 
 ### Step 3: Verify Publication
@@ -175,9 +175,9 @@ Once published and tested on PyPI, submit to the official MCP Registry:
    Or visit: https://registry.modelcontextprotocol.io/
 
 **Note:** The `server.json` file is already configured with:
-- Name: `io.github.qrussell/wemo`
+- Name: `io.github.qrussell/wemo` (or will be updated to apiarya namespace)
 - PyPI package: `wemo-mcp-server`
-- Repository: `https://github.com/qrussell/wemo-ops-center`
+- Repository: `https://github.com/apiarya/wemo-mcp-server`
 
 The registry validates that the PyPI package exists and matches the specified version before accepting the submission.
 

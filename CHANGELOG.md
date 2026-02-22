@@ -61,5 +61,6 @@ This patch release enables successful publication to the official MCP Registry a
 - MCP server implementation
 - PyPI packaging setup
 
-[1.0.0]: https://github.com/qrussell/wemo-ops-center/compare/mcp-v0.1.0...mcp-v1.0.0
-[0.1.0]: https://github.com/qrussell/wemo-ops-center/releases/tag/mcp-v0.1.0
+[1.0.1]: https://github.com/apiarya/wemo-mcp-server/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/apiarya/wemo-mcp-server/compare/v0.1.0...v1.0.0
+[0.1.0]: https://github.com/apiarya/wemo-mcp-server/releases/tag/v0.1.0

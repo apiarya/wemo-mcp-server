@@ -37,7 +37,7 @@ Seamlessly integrate WeMo smart home devices with AI assistants through the Mode
 
 ### Example Usage
 
-![Claude Desktop controlling WeMo devices](https://raw.githubusercontent.com/qrussell/wemo-ops-center/main/mcp/assets/claude-example.png)
+![Claude Desktop controlling WeMo devices](https://raw.githubusercontent.com/apiarya/wemo-mcp-server/main/assets/claude-example.png)
 
 *Control WeMo devices through Claude Desktop with natural language - just ask in plain English!*
 
@@ -400,8 +400,8 @@ Comparison of features between this MCP server and the main [wemo-ops-center](ht
 ### Setup
 
 ```bash
-git clone https://github.com/qrussell/wemo-ops-center.git
-cd wemo-ops-center/mcp
+git clone https://github.com/apiarya/wemo-mcp-server.git
+cd wemo-mcp-server
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv sync --dev
@@ -450,5 +450,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - Built with [Model Context Protocol SDK](https://github.com/modelcontextprotocol/python-sdk)
 - Uses [pywemo](https://github.com/pywemo/pywemo) for WeMo device communication
-- Part of the [wemo-ops-center](https://github.com/qrussell/wemo-ops-center) project
+- Related to the [wemo-ops-center](https://github.com/qrussell/wemo-ops-center) project (desktop and server applications)
+
 mcp-name: io.github.qrussell/wemo
