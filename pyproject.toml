@@ -105,8 +105,8 @@ ignore = [
     "FBT003", "B007", "RUF013",
     # Line length (will fix incrementally)
     "E501",
-    # Print statements (allowed in tests and scripts)
-    "T201",
+    # Print statements and asserts (allowed in tests)
+    "T201", "S101",
 ]
 
 [tool.pytest.ini_options]
