@@ -1,7 +1,7 @@
 """Unit tests for WeMo MCP server components."""
 
 import json
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -1127,6 +1127,184 @@ class TestMCPPrompts:
 
         result = await prompt_troubleshoot_device("192.168.1.55")
         assert "192.168.1.55" in result[0]["content"]
+
+
+# ==============================================================================
+# Exception handler paths (covers L500-512, L570-574, L599-601, L638-640,
+# L673-675, L752-754, L1416-1417)
+# ==============================================================================
+class TestExceptionHandlers:
+    # scan_network: scanner raises during execution (covers L500-512)
+    @pytest.mark.asyncio
+    async def test_scan_network_scanner_raises(self):
+        from wemo_mcp_server.server import scan_network
+
+        with patch("wemo_mcp_server.server.WeMoScanner") as MockScanner:
+            instance = Mock()
+            instance.scan = Mock(side_effect=RuntimeError("network down"))
+            MockScanner.return_value = instance
+            result = await scan_network(subnet="10.0.0.0/30", timeout=0.1, max_workers=1)
+        assert result["scan_completed"] is False
+
+    # list_devices: _cache_manager.load raises (covers L570-574)
+    @pytest.mark.asyncio
+    async def test_list_devices_exception(self):
+        from wemo_mcp_server.server import _device_cache, list_devices
+
+        _device_cache.clear()
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cm:
+            mock_cm.load.side_effect = RuntimeError("disk full")
+            result = await list_devices()
+        assert result["device_count"] == 0
+        assert "error" in result
+
+    # get_cache_info: _cache_manager.get_cache_info raises (covers L599-601)
+    @pytest.mark.asyncio
+    async def test_get_cache_info_exception(self):
+        from wemo_mcp_server.server import get_cache_info
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cm:
+            mock_cm.get_cache_info.side_effect = RuntimeError("cache corrupt")
+            result = await get_cache_info()
+        assert "error" in result
+
+    # clear_cache: _cache_manager.clear raises (covers L638-640)
+    @pytest.mark.asyncio
+    async def test_clear_cache_exception(self):
+        from wemo_mcp_server.server import clear_cache
+
+        with patch("wemo_mcp_server.server._cache_manager") as mock_cm:
+            mock_cm.clear.side_effect = RuntimeError("permission denied")
+            result = await clear_cache()
+        assert "error" in result
+
+    # get_configuration: get_config raises (covers L673-675)
+    @pytest.mark.asyncio
+    async def test_get_configuration_exception(self):
+        from wemo_mcp_server.server import get_configuration
+
+        with patch("wemo_mcp_server.server.get_config", side_effect=RuntimeError("config error")):
+            result = await get_configuration()
+        assert "error" in result
+
+    # get_device_status: device.get_state raises (covers L752-754)
+    @pytest.mark.asyncio
+    async def test_get_device_status_get_state_raises(self):
+        from wemo_mcp_server.server import _device_cache, get_device_status
+
+        _device_cache.clear()
+        mock_dev = Mock()
+        mock_dev.name = "Faulty Light"
+        mock_dev.get_state = Mock(side_effect=RuntimeError("connection refused"))
+        _device_cache["Faulty Light"] = mock_dev
+
+        result = await get_device_status("Faulty Light")
+        assert "error" in result
+
+        _device_cache.pop("Faulty Light", None)
+
+    # get_device_resource: extract_device_info raises (covers L1416-1417)
+    @pytest.mark.asyncio
+    async def test_get_device_resource_extract_raises(self):
+        from wemo_mcp_server.server import _device_cache, get_device_resource
+
+        _device_cache.clear()
+        mock_dev = Mock()
+        mock_dev.name = "Broken Device"
+        _device_cache["Broken Device"] = mock_dev
+
+        with patch(
+            "wemo_mcp_server.server.extract_device_info",
+            side_effect=RuntimeError("UPnP timeout"),
+        ):
+            result = await get_device_resource("Broken Device")
+        data = json.loads(result)
+        assert "error" in data or "name" in data  # graceful — returns partial info
+
+        _device_cache.pop("Broken Device", None)
+
+
+# ==============================================================================
+# scan_network elicitation paths (covers L403-418)
+# ==============================================================================
+class TestScanNetworkElicitation:
+    @pytest.mark.asyncio
+    async def test_elicitation_accept_with_subnet(self):
+        """ctx.elicit returns accept with a valid subnet → scan proceeds."""
+        from wemo_mcp_server.server import scan_network
+
+        elicit_data = Mock()
+        elicit_data.subnet = "10.0.0.0/30"
+
+        elicit_result = Mock()
+        elicit_result.action = "accept"
+        elicit_result.data = elicit_data
+
+        ctx = AsyncMock()
+        ctx.elicit = AsyncMock(return_value=elicit_result)
+
+        with patch("wemo_mcp_server.server.get_config") as mock_cfg:
+            cfg_obj = Mock()
+            cfg_obj.get = Mock(side_effect=lambda _s, _k, d=None: d)  # always return default
+            mock_cfg.return_value = cfg_obj
+            with patch("wemo_mcp_server.server.WeMoScanner") as MockScanner:
+                instance = Mock()
+                instance.scan = Mock(return_value=[])
+                MockScanner.return_value = instance
+                with patch("wemo_mcp_server.server._cache_manager") as mock_cm:
+                    mock_cm.save.return_value = True
+                    mock_cm.load.return_value = {}
+                    result = await scan_network(ctx=ctx)
+
+        assert "scan_completed" in result
+
+    @pytest.mark.asyncio
+    async def test_elicitation_cancel_returns_error(self):
+        """ctx.elicit returns cancel → scan aborted."""
+        from wemo_mcp_server.server import scan_network
+
+        elicit_result = Mock()
+        elicit_result.action = "cancel"
+        elicit_result.data = None
+
+        ctx = AsyncMock()
+        ctx.elicit = AsyncMock(return_value=elicit_result)
+
+        with patch("wemo_mcp_server.server.get_config") as mock_cfg:
+            cfg_obj = Mock()
+            cfg_obj.get = Mock(side_effect=lambda _s, _k, d=None: d)
+            mock_cfg.return_value = cfg_obj
+            result = await scan_network(ctx=ctx)
+
+        assert result["scan_completed"] is False
+        assert "cancelled" in result["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_elicitation_accept_no_data_uses_default(self):
+        """ctx.elicit returns accept but data is None → falls back to config default."""
+        from wemo_mcp_server.server import scan_network
+
+        elicit_result = Mock()
+        elicit_result.action = "accept"
+        elicit_result.data = None
+
+        ctx = AsyncMock()
+        ctx.elicit = AsyncMock(return_value=elicit_result)
+
+        with patch("wemo_mcp_server.server.get_config") as mock_cfg:
+            cfg_obj = Mock()
+            cfg_obj.get = Mock(side_effect=lambda _s, _k, d=None: d)
+            mock_cfg.return_value = cfg_obj
+            with patch("wemo_mcp_server.server.WeMoScanner") as MockScanner:
+                instance = Mock()
+                instance.scan = Mock(return_value=[])
+                MockScanner.return_value = instance
+                with patch("wemo_mcp_server.server._cache_manager") as mock_cm:
+                    mock_cm.save.return_value = True
+                    mock_cm.load.return_value = {}
+                    result = await scan_network(ctx=ctx)
+
+        assert "scan_completed" in result
 
 
 if __name__ == "__main__":
