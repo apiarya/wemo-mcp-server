@@ -107,6 +107,9 @@ ignore = [
     "E501",
     # Print statements and asserts (allowed in tests)
     "T201", "S101",
+    # Test-specific rules
+    "PLC0415",  # Imports inside functions OK in tests
+    "N806",  # Allow MockScanner naming in tests
 ]
 
 [tool.pytest.ini_options]

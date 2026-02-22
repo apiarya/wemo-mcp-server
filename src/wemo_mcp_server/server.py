@@ -197,7 +197,9 @@ def extract_device_info(device: Any) -> dict[str, Any]:
 
 @mcp.tool()
 async def scan_network(
-    subnet: str = "192.168.1.0/24", timeout: float = 0.6, max_workers: int = 60,
+    subnet: str = "192.168.1.0/24",
+    timeout: float = 0.6,
+    max_workers: int = 60,
 ) -> dict[str, Any]:
     """Scan network for WeMo devices using pywemo discovery.
 
@@ -375,7 +377,9 @@ async def get_device_status(device_identifier: str) -> dict[str, Any]:
 
 @mcp.tool()
 async def control_device(
-    device_identifier: str, action: str, brightness: int = None,
+    device_identifier: str,
+    action: str,
+    brightness: int = None,
 ) -> dict[str, Any]:
     """Control a WeMo device (turn on, off, toggle, or set brightness).
 

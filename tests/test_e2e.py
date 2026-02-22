@@ -274,7 +274,9 @@ async def test_control_device(results: TestResults, scan_result):
                 # Restore original
                 await asyncio.sleep(1)
                 control_result2 = await control_device(
-                    device_name, "brightness", brightness=original_brightness,
+                    device_name,
+                    "brightness",
+                    brightness=original_brightness,
                 )
                 print(f"  ✅ Restored brightness to {original_brightness}%")
 
