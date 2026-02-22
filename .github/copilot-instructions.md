@@ -182,6 +182,85 @@ pip install -e .
 
 ## Commit Practices
 
+### Pre-Commit Security Check 🔒 CRITICAL
+**Before every commit**, scan for sensitive data and secrets:
+
+#### What to Check:
+1. **API Keys & Tokens**
+   - [ ] No API keys (OpenAI, Anthropic, etc.)
+   - [ ] No access tokens (GitHub, PyPI, etc.)
+   - [ ] No authentication credentials
+
+2. **Configuration Files**
+   - [ ] No hardcoded passwords or secrets
+   - [ ] No private keys or certificates
+   - [ ] No database credentials
+
+3. **Personal Information**
+   - [ ] No email addresses (except public ones in documentation)
+   - [ ] No phone numbers or addresses
+   - [ ] No internal URLs or endpoints
+
+4. **MCP Registry Tokens**
+   - [ ] No `.mcpregistry_github_token` content
+   - [ ] No `.mcpregistry_registry_token` content
+   - [ ] These files should be in `.gitignore`
+
+5. **Environment Files**
+   - [ ] No `.env` files committed
+   - [ ] No secrets in shell scripts
+   - [ ] No hardcoded credentials in config files
+
+#### Quick Security Scan Commands:
+```bash
+# Check for common secret patterns
+git diff --cached | grep -iE '(api[_-]?key|secret|token|password|credential)'
+
+# Check for potential secrets in all staged files
+git diff --cached --name-only | xargs grep -iE '(api[_-]?key|secret|token|password|credential)' 2>/dev/null
+
+# Check for email addresses
+git diff --cached | grep -E '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+
+# View all staged changes for manual review
+git diff --cached
+```
+
+#### Common False Positives (OK to commit):
+- ✅ Example API keys in documentation (clearly marked as examples)
+- ✅ Public PyPI tokens in documentation (for educational purposes)
+- ✅ "secret" or "token" in variable names or comments
+- ✅ Public email addresses in LICENSE or CONTRIBUTORS
+
+#### If You Find Secrets:
+```bash
+# Unstage the file
+git reset HEAD <file>
+
+# Remove the secret from the file
+vim <file>
+
+# Stage the cleaned file
+git add <file>
+```
+
+**⚠️ If already committed but not pushed:**
+```bash
+# Amend the last commit
+git commit --amend
+
+# Or reset and recommit
+git reset HEAD~1
+# Clean files, then re-commit
+```
+
+**🚨 If already pushed:**
+1. Immediately revoke the exposed credential
+2. Generate a new credential
+3. Update the code with new credential (via environment variables)
+4. Consider using `git filter-branch` or BFG Repo-Cleaner to remove from history
+5. Notify team/users if necessary
+
 ### Pre-Commit Documentation Check ⚠️ REQUIRED
 **Before every commit**, verify if documentation needs updates:
 
@@ -245,6 +324,50 @@ TODO: Add example prompts for feature X"
 ```
 
 Then create a GitHub issue to track the documentation update.
+
+### Before Pushing 🚨 ALWAYS ASK
+**Never push without user confirmation!**
+
+Before executing `git push`:
+1. **Review what will be pushed**:
+   ```bash
+   # See commits that will be pushed
+   git log origin/main..HEAD --oneline
+   
+   # See all changes that will be pushed
+   git diff origin/main..HEAD
+   ```
+
+2. **Final security check**:
+   ```bash
+   # Scan all commits being pushed for secrets
+   git log origin/main..HEAD -p | grep -iE '(api[_-]?key|secret|token|password|credential)'
+   ```
+
+3. **Ask the user**:
+   - Show summary of commits being pushed
+   - Show file changes summary
+   - Wait for explicit confirmation before pushing
+   - Example: "Ready to push 3 commits (modified: 5 files). Proceed? (y/n)"
+
+4. **Only push after confirmation**:
+   ```bash
+   # User says yes
+   git push origin main
+   
+   # User says no
+   # Explain what needs to be fixed and wait for next instruction
+   ```
+
+**⚠️ IMPORTANT**: This is a safety mechanism to prevent accidental pushes of:
+- Unreviewed code
+- Sensitive data that passed initial checks
+- Incomplete work
+- Commits to wrong branch
+
+**Exception**: Only skip confirmation for:
+- Automated CI/CD workflows (GitHub Actions)
+- Explicitly requested immediate pushes ("push now", "commit and push")
 
 ## Publishing & CI/CD
 
