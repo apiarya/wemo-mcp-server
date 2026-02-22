@@ -3,6 +3,7 @@
 import asyncio
 import concurrent.futures
 import ipaddress
+import json
 import logging
 import socket
 import sys
@@ -1246,6 +1247,118 @@ async def get_homekit_code(device_identifier: str) -> dict[str, Any]:
         )
         error_response["error"] = f"Failed to get HomeKit code: {error_msg}"
         return error_response
+
+
+@mcp.resource("devices://")
+async def list_device_resources() -> str:
+    """List all discovered WeMo devices as MCP resources.
+
+    Returns an index of every device currently in the cache, with a URI that can
+    be fetched individually via the device://{device_id} resource.
+
+    Useful for MCP clients that want to enumerate available devices without
+    calling the scan_network or list_devices tools.
+    """
+    # De-duplicate: the in-memory cache stores both name and IP as keys
+    seen: set[str] = set()
+    entries = []
+
+    source_cache: dict[str, Any] = {}
+
+    if _device_cache:
+        source_cache = _device_cache
+    else:
+        # Fall back to persistent JSON cache after a server restart
+        persisted = _cache_manager.load()
+        if persisted:
+            source_cache = {k: v for k, v in persisted.items() if isinstance(v, dict)}
+
+    for key, device in source_cache.items():
+        # Only emit name-keyed entries (skip bare IP keys) to avoid duplicates
+        name = getattr(device, "name", None) if not isinstance(device, dict) else device.get("name")
+        if not name:
+            continue
+        if name in seen:
+            continue
+        seen.add(name)
+        ip = (
+            getattr(device, "host", "unknown")
+            if not isinstance(device, dict)
+            else device.get("host", "unknown")
+        )
+        entries.append(
+            {
+                "uri": f"device://{name}",
+                "name": name,
+                "ip_address": ip,
+                "mime_type": "application/json",
+            }
+        )
+
+    return json.dumps(
+        {
+            "total_devices": len(entries),
+            "devices": entries,
+        },
+        indent=2,
+    )
+
+
+@mcp.resource(
+    "device://{device_id}",
+    mime_type="application/json",
+    description="Real-time info and state for a single WeMo device. Use the device name or IP as device_id.",
+)
+async def get_device_resource(device_id: str) -> str:
+    """Get full details and live state for a single WeMo device.
+
+    Args:
+    ----
+        device_id: Device name (e.g. "Office Light") or IP address
+
+    Returns:
+    -------
+        JSON string with device info and current state.
+
+    """
+    # 1. Try in-memory cache first
+    device = _device_cache.get(device_id)
+
+    # 2. Try case-insensitive name match against in-memory cache
+    if device is None:
+        lower = device_id.lower()
+        for key, dev in _device_cache.items():
+            if getattr(dev, "name", "").lower() == lower:
+                device = dev
+                break
+
+    # 3. Fall back to lazy reconnect from persistent cache
+    if device is None:
+        device = await _reconnect_device_from_cache(device_id)
+
+    if device is None:
+        available = sorted(
+            {getattr(d, "name", k) for k, d in _device_cache.items() if not isinstance(d, dict)}
+        )
+        return json.dumps(
+            {
+                "error": f"Device '{device_id}' not found",
+                "suggestion": "Run scan_network first, or check the devices:// resource for available names",
+                "available_devices": available,
+            },
+            indent=2,
+        )
+
+    loop = asyncio.get_event_loop()
+    try:
+        info = await loop.run_in_executor(None, extract_device_info, device)
+    except Exception as e:
+        info = {
+            "name": getattr(device, "name", device_id),
+            "error": f"Could not fetch live state: {e}",
+        }
+
+    return json.dumps(info, indent=2)
 
 
 def main() -> None:
