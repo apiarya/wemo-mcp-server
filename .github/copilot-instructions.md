@@ -2,13 +2,50 @@
 
 # WeMo MCP Server - Copilot Instructions
 
+## 🤖 Mandatory Rules for AI Agents
+
+> These rules apply to GitHub Copilot and any AI assistant making changes in this repo.
+> Violating them has caused CI failures and broken releases in the past.
+
+### BEFORE EVERY `git commit` — no exceptions
+
+1. **Run the full test suite** and confirm it passes:
+   ```bash
+   .venv/bin/python -m pytest tests/test_server.py tests/test_phase2.py tests/test_models.py -q --tb=short
+   # Must show: X passed, 0 failed
+   ```
+   - This takes ~5 seconds. There is no acceptable reason to skip it.
+   - `--no-verify` only bypasses pre-commit hooks — it does NOT run tests. You must run them explicitly.
+   - If a test fails, fix the test or the code before committing. Do not commit broken tests.
+
+2. **Run linting** and confirm it passes:
+   ```bash
+   .venv/bin/python -m ruff check src/ tests/
+   ```
+
+3. Only after both pass, proceed with `git commit --no-verify`.
+
+### BEFORE EVERY `git push` — always ask the user first
+
+Show the commit summary and wait for explicit confirmation before pushing:
+```bash
+git log origin/main..HEAD --oneline
+```
+Exception: user has explicitly said "push" or "commit and push" in their request.
+
+### WHY THIS MATTERS
+
+The `cache_keys` removal (Feb 21 2026) broke CI because tests were not run before committing.
+A 5-second local test run would have caught it immediately.
+**Never let a CI failure be the first signal that something is broken.**
+
 **Production-ready MCP Server for WeMo smart home device control via AI assistants.**
 
 ## Project Identity
 - **Repository**: https://github.com/apiarya/wemo-mcp-server
 - **Package**: `wemo-mcp-server` (PyPI)
 - **MCP Name**: `io.github.apiarya/wemo`
-- **Version**: v1.1.1 (stable)
+- **Version**: v1.3.1 (stable)
 - **Status**: Production • Published on PyPI and MCP Registry
 
 ## Project Type & Architecture
@@ -31,16 +68,23 @@ Natural language control of WeMo smart home devices through AI assistants:
 ```
 wemo-mcp-server/
 ├── src/wemo_mcp_server/
-│   ├── __init__.py          # Package init and version (__version__ = "1.1.1")
+│   ├── __init__.py          # Package init and version (__version__ = "1.3.1")
 │   ├── __main__.py          # Entry point for python -m wemo_mcp_server
-│   └── server.py            # Main server (701 lines) - all MCP tools and logic
+│   ├── server.py            # Main server (~1200 lines) - all MCP tools and logic
+│   ├── cache.py             # Persistent JSON device cache (DeviceCache)
+│   ├── config.py            # YAML + env var configuration management
+│   ├── error_handling.py    # Retry decorator + error classification
+│   └── models.py            # Pydantic request/response models
 ├── tests/
 │   ├── __init__.py
-│   ├── test_server.py       # Unit tests (15 tests)
+│   ├── test_server.py       # Unit tests (30 tests, server.py)
+│   ├── test_phase2.py       # Unit tests (72 tests, cache/config/error_handling)
+│   ├── test_models.py       # Unit tests (Pydantic models)
 │   └── test_e2e.py          # End-to-end tests with real devices
 ├── .github/
 │   ├── workflows/
-│   │   └── pypi-publish.yml # Automated publishing (PyPI + MCP Registry)
+│   │   ├── ci.yml           # CI: multi-version tests + quality checks
+│   │   └── release.yml      # Release: publish to PyPI + MCP Registry
 │   ├── copilot-instructions.md  # This file
 │   ├── PYPI_PUBLISHING.md       # PyPI trusted publishing docs
 │   └── PUBLISHING_AUTOMATION.md # Automation guide
@@ -126,18 +170,20 @@ All tools are async and decorated with `@mcp.tool()`:
 ### 2. `list_devices()`
 - **Purpose**: List cached devices from previous scans
 - **Returns**: Device count and device list
-- **Note**: Run scan_network first to populate cache
+- **Note**: Falls back to persistent JSON cache on restart — no rescan required
 
 ### 3. `get_device_status(device_identifier)`
 - **Purpose**: Get real-time device state
 - **Input**: Device name or IP address
 - **Returns**: State (on/off), brightness (if dimmer), device info
+- **Note**: Auto-reconnects from file cache if in-memory cache is empty
 
 ### 4. `control_device(device_identifier, action, brightness)`
 - **Purpose**: Control devices
 - **Actions**: "on", "off", "toggle", "brightness"
 - **Brightness**: 1-100 for dimmers
 - **Returns**: Success status, new state, brightness
+- **Note**: Auto-reconnects from file cache if in-memory cache is empty
 
 ### 5. `rename_device(device_identifier, new_name)`
 - **Purpose**: Change device friendly name
@@ -148,6 +194,18 @@ All tools are async and decorated with `@mcp.tool()`:
 - **Purpose**: Extract HomeKit setup code
 - **Note**: Not all devices support HomeKit
 - **Returns**: HomeKit code (format: XXX-XX-XXX)
+
+### 7. `get_cache_info()`
+- **Purpose**: Inspect persistent cache status
+- **Returns**: Cache age, TTL, device count, expiry status
+
+### 8. `clear_cache()`
+- **Purpose**: Clear file + in-memory cache to force fresh scan
+- **Returns**: Success status
+
+### 9. `get_configuration()`
+- **Purpose**: View all current config settings
+- **Returns**: Network, cache, and logging settings with active values
 
 ## Development Guidelines
 
@@ -182,37 +240,38 @@ GitHub Actions workflow verifies version consistency before publishing.
 
 ## Testing
 
-### Unit Tests (test_server.py)
-- **30 tests** covering comprehensive functionality (up from 15)
-- **78.14% coverage** (up from 32%, +46pp improvement)
-- Mock-based testing for network operations
-- Tests WeMoScanner, extract_device_info, all 6 MCP tools, helper functions
-- All tests pass in ~3.5 seconds
-- Run: `pytest tests/test_server.py -v`
+### Unit Tests
+- **128 tests** across 3 test files (30 + 72 + 26)
+- **~81.88% overall coverage**
+- All tests pass in ~4 seconds
+- Run: `pytest tests/test_server.py tests/test_phase2.py tests/test_models.py -v`
 
 ### Test Coverage Breakdown
 ```
-src/wemo_mcp_server/__init__.py    3 statements   100.00% coverage
-src/wemo_mcp_server/server.py    279 statements    78.14% coverage
-src/wemo_mcp_server/__main__.py     1 statement     0.00% coverage
-──────────────────────────────────────────────────────────────────
-TOTAL                             283 statements    78.09% coverage
+src/wemo_mcp_server/__init__.py       100.00% coverage
+src/wemo_mcp_server/error_handling.py 100.00% coverage
+src/wemo_mcp_server/cache.py           96.34% coverage
+src/wemo_mcp_server/config.py          91.11% coverage
+src/wemo_mcp_server/models.py          86.05% coverage
+src/wemo_mcp_server/server.py          ~65% coverage
+──────────────────────────────────────────────────────
+TOTAL                                  ~81.88% coverage
 ```
 
 ### E2E Tests (test_e2e.py)
 - Requires actual WeMo devices on network
-- Tests all 6 MCP tools end-to-end
+- Tests all 9 MCP tools end-to-end
 - Configurable device count and control testing
 - **Not run in CI** (requires physical hardware)
 - Run: `python tests/test_e2e.py`
 
 ### Test Commands
 ```bash
-# Run unit tests only (fast, CI-compatible)
-pytest tests/test_server.py -v
+# Run all unit tests (fast, CI-compatible) — REQUIRED before every commit
+.venv/bin/python -m pytest tests/test_server.py tests/test_phase2.py tests/test_models.py -q --tb=short
 
 # Run with coverage
-pytest tests/test_server.py --cov=wemo_mcp_server --cov-report=html
+pytest tests/test_server.py tests/test_phase2.py tests/test_models.py --cov=wemo_mcp_server --cov-report=html
 
 # Run E2E tests (needs real devices)
 python tests/test_e2e.py
@@ -574,7 +633,7 @@ Before executing `git push`:
 ## Publishing & CI/CD
 
 ### Automated Publishing (✅ ACTIVE)
-**GitHub Actions workflow**: `.github/workflows/pypi-publish.yml`
+**GitHub Actions workflow**: `.github/workflows/release.yml`
 
 **Process**: Create GitHub release → Automated publish to PyPI + MCP Registry
 
@@ -714,4 +773,4 @@ Test prompts:
 
 ---
 
-**Last Updated**: February 21, 2026 (v1.1.1 + automated publishing)
+**Last Updated**: February 21, 2026 (v1.3.1 + Phase 2 features + mandatory AI pre-commit rules)
