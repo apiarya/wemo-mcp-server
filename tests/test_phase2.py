@@ -282,7 +282,9 @@ class TestDeviceCache:
         # Manually set an old timestamp
         cache_data = json.loads(cache.cache_file.read_text())
         cache_data["timestamp"] = time.time() - 3600
-        cache.cache_file.write_text(json.dumps(cache_data))
+        cache.cache_file.write_text(
+            json.dumps(cache_data)
+        )  # NOSONAR (tmp_path is safe test fixture)
 
         result = cache.load()
         assert result == {}
@@ -341,7 +343,7 @@ class TestDeviceCache:
         # Set far-past timestamp
         data = json.loads(cache.cache_file.read_text())
         data["timestamp"] = time.time() - 7200
-        cache.cache_file.write_text(json.dumps(data))
+        cache.cache_file.write_text(json.dumps(data))  # NOSONAR (tmp_path is safe test fixture)
         assert cache.is_expired() is True
 
     def test_is_expired_corrupt_json(self, tmp_path: Path):

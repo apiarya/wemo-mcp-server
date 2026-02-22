@@ -6,6 +6,8 @@ Control WeMo smart home devices through AI assistants using natural language.
 
 [![CI](https://github.com/apiarya/wemo-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/apiarya/wemo-mcp-server/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/apiarya/wemo-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/apiarya/wemo-mcp-server)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=apiarya_wemo-mcp-server&metric=alert_status)](https://sonarcloud.io/project/overview?id=apiarya_wemo-mcp-server)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=apiarya_wemo-mcp-server&metric=security_rating)](https://sonarcloud.io/project/overview?id=apiarya_wemo-mcp-server)
 [![PyPI version](https://img.shields.io/pypi/v/wemo-mcp-server)](https://pypi.org/project/wemo-mcp-server/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
