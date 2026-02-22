@@ -116,7 +116,9 @@ class WeMoScanner:
         self.timeout = 0.6
         self.wemo_ports = [49152, 49153, 49154, 49155]
 
-    def probe_port(self, ip: str, ports: list[int] | None = None, timeout: float | None = None) -> str | None:
+    def probe_port(
+        self, ip: str, ports: list[int] | None = None, timeout: float | None = None
+    ) -> str | None:
         """Probe an IP address on common WeMo ports.
 
         Args:
