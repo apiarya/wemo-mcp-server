@@ -51,9 +51,13 @@ Seamlessly integrate WeMo smart home devices with AI assistants through the Mode
 
 ### Example Usage
 
-![Claude Desktop controlling WeMo devices](https://raw.githubusercontent.com/apiarya/wemo-mcp-server/main/assets/claude-example.png)
+![Turning on lights with natural language](https://raw.githubusercontent.com/apiarya/wemo-mcp-server/main/assets/turn-on.png)
 
-*Control WeMo devices through Claude Desktop with natural language - just ask in plain English!*
+*Control WeMo devices through AI assistants with natural language - just ask in plain English!*
+
+![Goodnight scene turns off all devices](https://raw.githubusercontent.com/apiarya/wemo-mcp-server/main/assets/goodnight.png)
+
+*"Goodnight" — one command turns off every device in the house*
 
 ### Key Features
 
@@ -439,6 +443,10 @@ Use this code to add the device to Apple Home.
 
 **Note:** Not all WeMo devices support HomeKit. If a device doesn't support HomeKit, you'll get an error message.
 
+![HomeKit code retrieval step 1](https://raw.githubusercontent.com/apiarya/wemo-mcp-server/main/assets/homekit-1.png)
+
+![HomeKit code retrieval step 2](https://raw.githubusercontent.com/apiarya/wemo-mcp-server/main/assets/homekit-2.png)
+
 ### 7. get_cache_info
 
 Get information about the persistent device cache.
@@ -531,12 +539,20 @@ Four built-in guided prompts available via `/` slash commands in supporting clie
 | `activate-scene` | Control multiple devices as a scene |
 | `troubleshoot-device` | Step-by-step device troubleshooting |
 
+![MCP prompts in VS Code](https://raw.githubusercontent.com/apiarya/wemo-mcp-server/main/assets/prompts.png)
+
+*All four prompts surfaced as `/mcp.wemo.*` slash commands in VS Code*
+
 ### Elicitations
 
 The server proactively asks for missing information rather than failing silently:
 
 - **`scan_network`** — if no custom subnet is configured (default `192.168.1.0/24`), asks which subnet to scan before proceeding
 - **`control_device`** — if a device name isn't found in cache, presents closest matches and asks which device was intended
+
+![MCP elicitation prompting for subnet](https://raw.githubusercontent.com/apiarya/wemo-mcp-server/main/assets/elicitation.png)
+
+*Elicitation in action — server asks for the subnet rather than scanning the wrong network silently*
 
 ### Client Support Matrix
 
