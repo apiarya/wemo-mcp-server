@@ -36,6 +36,7 @@ class WeMoScanner:
     """Scanner for discovering WeMo devices on the network using pywemo."""
 
     def __init__(self):
+        """Initialize the WeMo scanner with default timeout and port configuration."""
         self.timeout = 0.6
         self.wemo_ports = [49152, 49153, 49154, 49155]
 
@@ -182,6 +183,7 @@ class WeMoScanner:
 
     def scan_subnet(self, target_cidr: str, max_workers: int = 60) -> list[Any]:
         """Scan a subnet for WeMo devices.
+
         Uses UPnP/SSDP discovery FIRST (primary method), then port scanning as backup.
         This matches the proven approach from wemo-ops-center UI.
 
@@ -819,7 +821,7 @@ async def get_homekit_code(device_identifier: str) -> dict[str, Any]:
 
 
 def main() -> None:
-    """Main entry point for the MCP server."""
+    """Start the WeMo MCP server."""
     logger.info("Starting WeMo MCP Server...")
     mcp.run(transport="stdio")
 
