@@ -102,7 +102,7 @@ ignore = [
     # Performance (premature optimization)
     "PERF203", "PERF102",
     # Too strict for current codebase
-    "FBT003", "B007", "RUF013",
+    "FBT001", "FBT003", "B007", "RUF013",
     # Line length (will fix incrementally)
     "E501",
     # Print statements and asserts (allowed in tests)

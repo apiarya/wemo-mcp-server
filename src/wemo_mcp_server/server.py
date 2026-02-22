@@ -69,6 +69,117 @@ class WeMoScanner:
                 s.close()
         return None
 
+    def _run_upnp_discovery(self) -> list[Any]:
+        """Run UPnP/SSDP discovery phase.
+
+        Returns:
+            List of devices found via UPnP/SSDP
+
+        """
+        logger.info("Phase 1: Running UPnP/SSDP discovery (primary method)...")
+        try:
+            upnp_devices = pywemo.discover_devices()
+            logger.info(f"UPnP/SSDP found {len(upnp_devices)} WeMo devices")
+            for dev in upnp_devices:
+                logger.info(f"  • {dev.name} at {dev.host}:{dev.port}")
+            return upnp_devices
+        except Exception as e:
+            logger.warning(f"UPnP discovery failed: {e}")
+            return []
+
+    def _parse_cidr_network(self, target_cidr: str) -> list[Any] | None:
+        """Parse CIDR notation and return list of hosts.
+
+        Args:
+            target_cidr: CIDR notation subnet
+
+        Returns:
+            List of IP addresses to scan, or None if invalid
+
+        """
+        try:
+            network = ipaddress.ip_network(target_cidr, strict=False)
+            all_hosts = list(network.hosts())
+            logger.info(f"Phase 2: Backup port scan on {len(all_hosts)} hosts in {target_cidr}")
+            return all_hosts
+        except Exception as e:
+            logger.error(f"Invalid CIDR notation: {target_cidr} - {e}")
+            return None
+
+    def _probe_active_ips(self, all_hosts: list[Any], max_workers: int) -> list[str]:
+        """Probe hosts for active IPs on WeMo ports.
+
+        Args:
+            all_hosts: List of IP addresses to probe
+            max_workers: Maximum concurrent workers
+
+        Returns:
+            List of active IP addresses
+
+        """
+        active_ips = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(self.probe_port, ip): ip for ip in all_hosts}
+            for future in concurrent.futures.as_completed(futures):
+                result = future.result()
+                if result:
+                    active_ips.append(result)
+                    logger.debug(f"Active IP found: {result}")
+        return active_ips
+
+    def _verify_wemo_devices(
+        self,
+        active_ips_to_check: list[str],
+        max_workers: int,
+    ) -> list[Any]:
+        """Verify if active IPs are WeMo devices.
+
+        Args:
+            active_ips_to_check: List of IPs to verify
+            max_workers: Maximum concurrent workers
+
+        Returns:
+            List of verified WeMo device objects
+
+        """
+        if not active_ips_to_check:
+            return []
+
+        logger.info(f"Found {len(active_ips_to_check)} new active IPs to verify...")
+
+        # Temporarily reduce pywemo's timeout to speed up scans
+        original_timeout = pywemo.discovery.REQUESTS_TIMEOUT
+        pywemo.discovery.REQUESTS_TIMEOUT = 5
+
+        def verify_device(ip: str) -> Any | None:
+            """Try to verify if an IP is a WeMo device."""
+            for port in self.wemo_ports:
+                try:
+                    url = f"http://{ip}:{port}/setup.xml"
+                    dev = pywemo.discovery.device_from_description(url)
+                    if dev:
+                        logger.info(f"WeMo device found via port scan: {dev.name} at {ip}:{port}")
+                        return dev
+                except Exception:
+                    pass
+            return None
+
+        # Parallelize device verification
+        verified_devices = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            verification_futures = {
+                executor.submit(verify_device, ip): ip for ip in active_ips_to_check
+            }
+            for future in concurrent.futures.as_completed(verification_futures):
+                device = future.result()
+                if device:
+                    verified_devices.append(device)
+
+        # Restore original timeout
+        pywemo.discovery.REQUESTS_TIMEOUT = original_timeout
+
+        return verified_devices
+
     def scan_subnet(self, target_cidr: str, max_workers: int = 60) -> list[Any]:
         """Scan a subnet for WeMo devices.
         Uses UPnP/SSDP discovery FIRST (primary method), then port scanning as backup.
@@ -82,78 +193,23 @@ class WeMoScanner:
             List of discovered pywemo device objects
 
         """
-        found_devices = []
+        # Phase 1: UPnP/SSDP Discovery (PRIMARY)
+        found_devices = self._run_upnp_discovery()
 
-        # Phase 1: UPnP/SSDP Discovery (PRIMARY - most reliable method)
-        # This is what wemo-ops-center UI uses first
-        logger.info("Phase 1: Running UPnP/SSDP discovery (primary method)...")
-        try:
-            upnp_devices = pywemo.discover_devices()
-            found_devices.extend(upnp_devices)
-            logger.info(f"UPnP/SSDP found {len(upnp_devices)} WeMo devices")
-            for dev in upnp_devices:
-                logger.info(f"  • {dev.name} at {dev.host}:{dev.port}")
-        except Exception as e:
-            logger.warning(f"UPnP discovery failed: {e}")
-
-        try:
-            network = ipaddress.ip_network(target_cidr, strict=False)
-            all_hosts = list(network.hosts())
-            logger.info(f"Phase 2: Backup port scan on {len(all_hosts)} hosts in {target_cidr}")
-        except Exception as e:
-            logger.error(f"Invalid CIDR notation: {target_cidr} - {e}")
+        # Parse and validate CIDR network
+        all_hosts = self._parse_cidr_network(target_cidr)
+        if all_hosts is None:
             return found_devices
 
-        # Phase 2: Probe for active IPs (backup method for devices that don't respond to UPnP)
-        active_ips = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(self.probe_port, ip): ip for ip in all_hosts}
-            for future in concurrent.futures.as_completed(futures):
-                result = future.result()
-                if result:
-                    active_ips.append(result)
-                    logger.debug(f"Active IP found: {result}")
+        # Phase 2: Probe for active IPs
+        active_ips = self._probe_active_ips(all_hosts, max_workers)
 
         # Phase 3: Verify active IPs (only check IPs not already found via UPnP)
         found_ips = {d.host for d in found_devices if hasattr(d, "host")}
         active_ips_to_check = [ip for ip in active_ips if ip not in found_ips]
 
-        if active_ips_to_check:
-            logger.info(f"Found {len(active_ips_to_check)} new active IPs to verify...")
-
-            # Temporarily reduce pywemo's timeout to speed up scans
-            original_timeout = pywemo.discovery.REQUESTS_TIMEOUT
-            pywemo.discovery.REQUESTS_TIMEOUT = (
-                5  # Reduce from 10s to 5s (some devices are slow responders)
-            )
-
-            def verify_device(ip: str) -> Any | None:
-                """Try to verify if an IP is a WeMo device."""
-                for port in self.wemo_ports:
-                    try:
-                        url = f"http://{ip}:{port}/setup.xml"
-                        dev = pywemo.discovery.device_from_description(url)
-                        if dev:
-                            logger.info(
-                                f"WeMo device found via port scan: {dev.name} at {ip}:{port}",
-                            )
-                            return dev
-                    except Exception:
-                        pass
-                return None
-
-            # Parallelize device verification to avoid sequential timeouts
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                verification_futures = {
-                    executor.submit(verify_device, ip): ip for ip in active_ips_to_check
-                }
-                for future in concurrent.futures.as_completed(verification_futures):
-                    device = future.result()
-                    if device:
-                        found_devices.append(device)
-
-            # Restore original timeout
-            pywemo.discovery.REQUESTS_TIMEOUT = original_timeout
+        verified_devices = self._verify_wemo_devices(active_ips_to_check, max_workers)
+        found_devices.extend(verified_devices)
 
         logger.info(f"Scan complete. Found {len(found_devices)} WeMo devices total")
         return found_devices
@@ -375,6 +431,104 @@ async def get_device_status(device_identifier: str) -> dict[str, Any]:
         }
 
 
+def _validate_action(action: str) -> dict[str, Any] | None:
+    """Validate control action.
+
+    Args:
+        action: Action string to validate
+
+    Returns:
+        Error dict if invalid, None if valid
+
+    """
+    if action.lower() not in ["on", "off", "toggle", "brightness"]:
+        return {
+            "error": f"Invalid action '{action}'. Must be 'on', 'off', 'toggle', or 'brightness'",
+            "success": False,
+        }
+    return None
+
+
+def _validate_brightness(brightness: int | None) -> dict[str, Any] | None:
+    """Validate brightness value.
+
+    Args:
+        brightness: Brightness value to validate
+
+    Returns:
+        Error dict if invalid, None if valid
+
+    """
+    if brightness is not None and (brightness < 1 or brightness > 100):
+        return {
+            "error": f"Invalid brightness '{brightness}'. Must be between 1 and 100",
+            "success": False,
+        }
+    return None
+
+
+async def _perform_device_action(
+    device: Any,
+    action: str,
+    brightness: int | None,
+    is_dimmer: bool,
+) -> None:
+    """Perform the requested action on device.
+
+    Args:
+        device: WeMo device object
+        action: Action to perform
+        brightness: Brightness value (if applicable)
+        is_dimmer: Whether device is a dimmer
+
+    """
+    loop = asyncio.get_event_loop()
+
+    if action == "brightness":
+        await loop.run_in_executor(None, device.set_brightness, brightness)
+    elif action == "on":
+        if is_dimmer and brightness is not None:
+            await loop.run_in_executor(None, device.set_brightness, brightness)
+        else:
+            await loop.run_in_executor(None, device.on)
+    elif action == "off":
+        await loop.run_in_executor(None, device.off)
+    elif action == "toggle":
+        await loop.run_in_executor(None, device.toggle)
+
+
+async def _build_control_result(device: Any, action: str, is_dimmer: bool) -> dict[str, Any]:
+    """Build result dictionary after control action.
+
+    Args:
+        device: WeMo device object
+        action: Action that was performed
+        is_dimmer: Whether device is a dimmer
+
+    Returns:
+        Result dictionary
+
+    """
+    loop = asyncio.get_event_loop()
+    new_state = await loop.run_in_executor(None, device.get_state, True)
+
+    result = {
+        "success": True,
+        "device_name": device.name,
+        "action_performed": action,
+        "new_state": "on" if new_state else "off",
+        "device_type": type(device).__name__,
+        "timestamp": time.time(),
+        "is_dimmer": is_dimmer,
+    }
+
+    if is_dimmer:
+        current_brightness = await loop.run_in_executor(None, device.get_brightness, True)
+        result["brightness"] = current_brightness
+
+    return result
+
+
 @mcp.tool()
 async def control_device(
     device_identifier: str,
@@ -402,24 +556,19 @@ async def control_device(
 
     """
     try:
-        # Validate action
+        # Validate inputs
         action = action.lower()
-        if action not in ["on", "off", "toggle", "brightness"]:
-            return {
-                "error": f"Invalid action '{action}'. Must be 'on', 'off', 'toggle', or 'brightness'",
-                "success": False,
-            }
 
-        # Validate brightness if provided
-        if brightness is not None and (brightness < 1 or brightness > 100):
-            return {
-                "error": f"Invalid brightness '{brightness}'. Must be between 1 and 100",
-                "success": False,
-            }
+        error = _validate_action(action)
+        if error:
+            return error
 
-        # Try to find device in cache
+        error = _validate_brightness(brightness)
+        if error:
+            return error
+
+        # Find device in cache
         device = _device_cache.get(device_identifier)
-
         if not device:
             return {
                 "error": f"Device '{device_identifier}' not found in cache",
@@ -432,12 +581,10 @@ async def control_device(
                 "success": False,
             }
 
-        # Perform the action in a thread pool
-        loop = asyncio.get_event_loop()
-
-        # Check if device is a dimmer (has brightness methods)
+        # Check if device is a dimmer
         is_dimmer = hasattr(device, "set_brightness") and hasattr(device, "get_brightness")
 
+        # Validate brightness action for non-dimmers
         if action == "brightness":
             if not is_dimmer:
                 return {
@@ -450,43 +597,15 @@ async def control_device(
                     "error": "Brightness value is required when action is 'brightness'",
                     "success": False,
                 }
-            await loop.run_in_executor(None, device.set_brightness, brightness)
 
-        elif action == "on":
-            if is_dimmer and brightness is not None:
-                # For dimmers, turn on and set brightness in one operation
-                await loop.run_in_executor(None, device.set_brightness, brightness)
-            else:
-                await loop.run_in_executor(None, device.on)
+        # Perform the action
+        await _perform_device_action(device, action, brightness, is_dimmer)
 
-        elif action == "off":
-            await loop.run_in_executor(None, device.off)
-
-        elif action == "toggle":
-            await loop.run_in_executor(None, device.toggle)
-
-        # Wait a moment for the device to respond
+        # Wait for device to respond
         await asyncio.sleep(0.5)
 
-        # Get the new state
-        new_state = await loop.run_in_executor(None, device.get_state, True)
-
-        result = {
-            "success": True,
-            "device_name": device.name,
-            "action_performed": action,
-            "new_state": "on" if new_state else "off",
-            "device_type": type(device).__name__,
-            "timestamp": time.time(),
-        }
-
-        # Add brightness for dimmers
-        if is_dimmer:
-            current_brightness = await loop.run_in_executor(None, device.get_brightness, True)
-            result["brightness"] = current_brightness
-            result["is_dimmer"] = True
-        else:
-            result["is_dimmer"] = False
+        # Build and return result
+        result = await _build_control_result(device, action, is_dimmer)
 
         logger.info(
             f"Device '{device.name}' {action} successful. New state: {result['new_state']}"
