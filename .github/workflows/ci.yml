@@ -32,7 +32,7 @@ jobs:
       - name: Run pytest with coverage
         run: |
           # Only run unit tests - E2E tests require physical WeMo devices
-          pytest tests/test_server.py -v --cov=wemo_mcp_server --cov-report=xml --cov-report=term-missing
+          pytest tests/test_server.py tests/test_phase2.py tests/test_models.py -v --cov=wemo_mcp_server --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
