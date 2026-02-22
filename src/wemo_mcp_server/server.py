@@ -13,6 +13,7 @@ import pywemo
 from mcp.server.fastmcp import FastMCP
 from pydantic import ValidationError
 
+from .error_handling import build_error_response, retry_on_network_error
 from .models import (
     ControlDeviceParams,
     DeviceIdentifierParam,
@@ -350,18 +351,18 @@ async def scan_network(
         return scan_result
 
     except Exception as e:
-        error_result = {
-            "error": f"Network scan failed: {e!s}",
-            "scan_parameters": {
+        logger.error(f"Network scan error: {e!s}", exc_info=True)
+        error_response = build_error_response(
+            e,
+            "Network scan",
+            context={
                 "subnet": params.subnet,
                 "timeout": params.timeout,
                 "max_workers": params.max_workers,
             },
-            "scan_completed": False,
-            "timestamp": time.time(),
-        }
-        logger.error(f"Network scan error: {e!s}", exc_info=True)
-        return error_result
+        )
+        error_response["scan_completed"] = False
+        return error_response
 
 
 @mcp.tool()
@@ -397,7 +398,9 @@ async def list_devices() -> dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"Error listing devices: {e}", exc_info=True)
-        return {"error": str(e), "device_count": 0, "devices": []}
+        error_response = build_error_response(e, "List devices")
+        error_response.update({"device_count": 0, "devices": []})
+        return error_response
 
 
 @mcp.tool()
@@ -444,9 +447,8 @@ async def get_device_status(device_identifier: str) -> dict[str, Any]:
                 ],
             }
 
-        # Get device state
-        loop = asyncio.get_event_loop()
-        state = await loop.run_in_executor(None, device.get_state, True)  # force_update=True
+        # Get device state with retry
+        state = await _get_device_state_with_retry(device)
 
         # Extract full device info
         device_info = extract_device_info(device)
@@ -455,7 +457,7 @@ async def get_device_status(device_identifier: str) -> dict[str, Any]:
 
         # Add brightness for dimmer devices
         if hasattr(device, "get_brightness"):
-            brightness = await loop.run_in_executor(None, device.get_brightness, True)
+            brightness = await _get_device_brightness_with_retry(device)
             device_info["brightness"] = brightness
             device_info["is_dimmer"] = True
         else:
@@ -473,10 +475,92 @@ async def get_device_status(device_identifier: str) -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Error getting device status: {e}", exc_info=True)
-        return {
-            "error": f"Failed to get device status: {e!s}",
-            "device_identifier": device_identifier,
-        }
+        return build_error_response(
+            e,
+            "Get device status",
+            context={"device_identifier": device_identifier},
+        )
+
+
+# ==============================================================================
+#  Retry wrappers for device operations
+# ==============================================================================
+
+
+@retry_on_network_error(max_attempts=3, initial_delay=0.5)
+async def _get_device_state_with_retry(device: Any) -> bool:
+    """Get device state with automatic retry on network errors.
+
+    Args:
+        device: WeMo device object
+
+    Returns:
+        Device state (True=on, False=off)
+
+    """
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, device.get_state, True)
+
+
+@retry_on_network_error(max_attempts=3, initial_delay=0.5)
+async def _get_device_brightness_with_retry(device: Any) -> int:
+    """Get device brightness with automatic retry on network errors.
+
+    Args:
+        device: WeMo device object
+
+    Returns:
+        Brightness level (0-100)
+
+    """
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, device.get_brightness, True)
+
+
+@retry_on_network_error(max_attempts=3, initial_delay=0.5)
+async def _set_device_state_with_retry(device: Any, state: bool) -> None:
+    """Set device state with automatic retry on network errors.
+
+    Args:
+        device: WeMo device object
+        state: Desired state (True=on, False=off)
+
+    """
+    loop = asyncio.get_event_loop()
+    if state:
+        await loop.run_in_executor(None, device.on)
+    else:
+        await loop.run_in_executor(None, device.off)
+
+
+@retry_on_network_error(max_attempts=3, initial_delay=0.5)
+async def _toggle_device_with_retry(device: Any) -> None:
+    """Toggle device state with automatic retry on network errors.
+
+    Args:
+        device: WeMo device object
+
+    """
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, device.toggle)
+
+
+@retry_on_network_error(max_attempts=3, initial_delay=0.5)
+async def _set_device_brightness_with_retry(device: Any, brightness: int) -> None:
+    """Set device brightness with automatic retry on network errors.
+
+    Args:
+        device: WeMo device object
+        brightness: Brightness level (1-100)
+
+    """
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, device.set_brightness, brightness)
+
+
+# ==============================================================================
+#  Validation helper functions
+# ==============================================================================
 
 
 def _validate_action(action: str) -> dict[str, Any] | None:
@@ -521,7 +605,7 @@ async def _perform_device_action(
     brightness: int | None,
     is_dimmer: bool,
 ) -> None:
-    """Perform the requested action on device.
+    """Perform the requested action on device with automatic retry.
 
     Args:
         device: WeMo device object
@@ -530,23 +614,21 @@ async def _perform_device_action(
         is_dimmer: Whether device is a dimmer
 
     """
-    loop = asyncio.get_event_loop()
-
     if action == "brightness":
-        await loop.run_in_executor(None, device.set_brightness, brightness)
+        await _set_device_brightness_with_retry(device, brightness)
     elif action == "on":
         if is_dimmer and brightness is not None:
-            await loop.run_in_executor(None, device.set_brightness, brightness)
+            await _set_device_brightness_with_retry(device, brightness)
         else:
-            await loop.run_in_executor(None, device.on)
+            await _set_device_state_with_retry(device, True)
     elif action == "off":
-        await loop.run_in_executor(None, device.off)
+        await _set_device_state_with_retry(device, False)
     elif action == "toggle":
-        await loop.run_in_executor(None, device.toggle)
+        await _toggle_device_with_retry(device)
 
 
 async def _build_control_result(device: Any, action: str, is_dimmer: bool) -> dict[str, Any]:
-    """Build result dictionary after control action.
+    """Build result dictionary after control action with retry.
 
     Args:
         device: WeMo device object
@@ -557,8 +639,7 @@ async def _build_control_result(device: Any, action: str, is_dimmer: bool) -> di
         Result dictionary
 
     """
-    loop = asyncio.get_event_loop()
-    new_state = await loop.run_in_executor(None, device.get_state, True)
+    new_state = await _get_device_state_with_retry(device)
 
     result = {
         "success": True,
@@ -571,7 +652,7 @@ async def _build_control_result(device: Any, action: str, is_dimmer: bool) -> di
     }
 
     if is_dimmer:
-        current_brightness = await loop.run_in_executor(None, device.get_brightness, True)
+        current_brightness = await _get_device_brightness_with_retry(device)
         result["brightness"] = current_brightness
 
     return result
@@ -669,12 +750,14 @@ async def control_device(
 
     except Exception as e:
         logger.error(f"Error controlling device: {e}", exc_info=True)
-        return {
-            "error": f"Failed to control device: {e!s}",
-            "device_identifier": device_identifier,
-            "action": action,
-            "success": False,
-        }
+        return build_error_response(
+            e,
+            "Control device",
+            context={
+                "device_identifier": device_identifier,
+                "action": action,
+            },
+        )
 
 
 @mcp.tool()
@@ -775,12 +858,14 @@ async def rename_device(device_identifier: str, new_name: str) -> dict[str, Any]
 
     except Exception as e:
         logger.error(f"Error renaming device: {e}", exc_info=True)
-        return {
-            "error": f"Failed to rename device: {e!s}",
-            "device_identifier": device_identifier,
-            "new_name": new_name,
-            "success": False,
-        }
+        return build_error_response(
+            e,
+            "Rename device",
+            context={
+                "device_identifier": device_identifier,
+                "new_name": new_name,
+            },
+        )
 
 
 @mcp.tool()
@@ -888,11 +973,13 @@ async def get_homekit_code(device_identifier: str) -> dict[str, Any]:
         if "UPnPError" in error_msg or "Action" in error_msg:
             error_msg = f"Device does not support HomeKit or the HomeKit feature is not available: {error_msg}"
 
-        return {
-            "error": f"Failed to get HomeKit code: {error_msg}",
-            "device_identifier": device_identifier,
-            "success": False,
-        }
+        error_response = build_error_response(
+            e,
+            "Get HomeKit code",
+            context={"device_identifier": device_identifier},
+        )
+        error_response["error"] = f"Failed to get HomeKit code: {error_msg}"
+        return error_response
 
 
 def main() -> None:
