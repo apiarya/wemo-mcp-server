@@ -85,7 +85,7 @@ jobs:
 
       - name: Verify server.json version
         run: |
-          SERVER_VERSION=$(grep '"version"' server.json | sed 's/.*"version": "\(.*\)".*/\1/')
+          SERVER_VERSION=$(grep '"version"' server.json | head -n 1 | sed 's/.*"version": "\(.*\)".*/\1/')
           TAG_VERSION="${{ steps.version.outputs.version }}"
           if [ "$SERVER_VERSION" != "$TAG_VERSION" ]; then
             echo "❌ Version mismatch in server.json!"
