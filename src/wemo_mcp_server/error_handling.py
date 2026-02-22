@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
@@ -190,7 +191,7 @@ def build_error_response(
             "recoverable": classification["recoverable"],
         },
         "suggestions": classification["suggestions"],
-        "timestamp": asyncio.get_event_loop().time(),
+        "timestamp": time.time(),
     }
 
     if context:

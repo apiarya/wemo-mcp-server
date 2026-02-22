@@ -72,7 +72,7 @@ class DeviceCache:
             )
 
             self._cache = devices
-            return devices
+            return dict(devices)
 
         except (json.JSONDecodeError, OSError) as e:
             logger.error(f"Failed to load cache from {self.cache_file}: {e}")
@@ -150,7 +150,7 @@ class DeviceCache:
                 data = json.load(f)
 
             cache_age = time.time() - data.get("timestamp", 0)
-            return cache_age > self.ttl_seconds
+            return bool(cache_age > self.ttl_seconds)
 
         except (json.JSONDecodeError, OSError, KeyError):
             return True

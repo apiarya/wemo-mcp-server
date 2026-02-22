@@ -118,7 +118,7 @@ class TestControlDeviceParams:
     def test_invalid_action(self):
         """Test invalid action."""
         with pytest.raises(ValidationError) as exc_info:
-            ControlDeviceParams(device_identifier="Light", action="invalid")
+            ControlDeviceParams(device_identifier="Light", action="invalid")  # type: ignore[arg-type]
 
         errors = exc_info.value.errors()
         assert any(e["loc"] == ("action",) for e in errors)

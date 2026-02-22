@@ -1,5 +1,6 @@
 """Configuration management for WeMo MCP server."""
 
+import copy
 import logging
 import os
 from pathlib import Path
@@ -48,7 +49,7 @@ class Config:
             config_file: Optional path to YAML configuration file
 
         """
-        self._config = DEFAULT_CONFIG.copy()
+        self._config: dict[str, Any] = copy.deepcopy(DEFAULT_CONFIG)
         self._config_file = config_file
 
         # Load from file if specified
@@ -155,7 +156,7 @@ class Config:
             Dictionary with section configuration
 
         """
-        return self._config.get(section, {}).copy()
+        return dict(self._config.get(section, {}))
 
     def set(self, section: str, key: str, value: Any) -> None:
         """Set a configuration value.

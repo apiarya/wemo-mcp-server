@@ -51,7 +51,7 @@ class WeMoScanner:
         self.timeout = 0.6
         self.wemo_ports = [49152, 49153, 49154, 49155]
 
-    def probe_port(self, ip: str, ports: list[int] = None, timeout: float = None) -> str | None:
+    def probe_port(self, ip: str, ports: list[int] | None = None, timeout: float | None = None) -> str | None:
         """Probe an IP address on common WeMo ports.
 
         Args:
@@ -94,7 +94,7 @@ class WeMoScanner:
             logger.info(f"UPnP/SSDP found {len(upnp_devices)} WeMo devices")
             for dev in upnp_devices:
                 logger.info(f"  • {dev.name} at {dev.host}:{dev.port}")
-            return upnp_devices
+            return list(upnp_devices)
         except Exception as e:
             logger.warning(f"UPnP discovery failed: {e}")
             return []
@@ -786,7 +786,7 @@ async def _build_control_result(device: Any, action: str, is_dimmer: bool) -> di
 async def control_device(
     device_identifier: str,
     action: str,
-    brightness: int = None,
+    brightness: int | None = None,
 ) -> dict[str, Any]:
     """Control a WeMo device (turn on, off, toggle, or set brightness).
 
@@ -812,7 +812,7 @@ async def control_device(
     try:
         params = ControlDeviceParams(
             device_identifier=device_identifier,
-            action=action,
+            action=action,  # type: ignore[arg-type]
             brightness=brightness,
         )
     except ValidationError as e:
