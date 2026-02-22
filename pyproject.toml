@@ -36,10 +36,12 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
     "black>=23.0.0",
     "isort>=5.12.0",
     "mypy>=1.0.0",
     "ruff>=0.1.0",
+    "pre-commit>=3.5.0",
 ]
 
 [project.urls]
@@ -89,3 +91,26 @@ ignore = ["D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107", "D203"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "-v --cov=wemo_mcp_server --cov-report=term-missing --cov-report=html"
+
+[tool.coverage.run]
+source = ["src/wemo_mcp_server"]
+omit = [
+    "tests/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "def __str__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+precision = 2
+show_missing = true
