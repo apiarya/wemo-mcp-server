@@ -62,3 +62,8 @@ Pipfile.lock
 *.log
 *.tmp
 *.bak
+
+# Configuration files (user-specific)
+.env
+config.yaml
+.wemo_mcp_cache.json
