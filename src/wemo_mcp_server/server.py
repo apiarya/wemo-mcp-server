@@ -503,7 +503,6 @@ async def list_devices() -> dict[str, Any]:
         result: dict[str, Any] = {
             "device_count": len(unique_devices),
             "devices": list(unique_devices.values()),
-            "cache_keys": len(_device_cache),
         }
         if unique_devices and all(d.get("source") == "file_cache" for d in unique_devices.values()):
             result["note"] = (
