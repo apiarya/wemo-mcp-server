@@ -12,8 +12,8 @@ from typing import Any
 from urllib.parse import unquote
 
 import pywemo
-from mcp.server.fastmcp import FastMCP
-from pydantic import ValidationError
+from mcp.server.fastmcp import Context, FastMCP
+from pydantic import BaseModel, ValidationError
 
 from .cache import _cache_manager, serialize_device
 from .config import get_config
@@ -38,6 +38,19 @@ mcp = FastMCP("wemo-mcp-server")
 
 # Global device cache to store discovered devices
 _device_cache: dict[str, Any] = {}  # key: device name or IP, value: pywemo device object
+
+
+# Elicitation schemas — lightweight Pydantic models used by ctx.elicit()
+class _DeviceChoiceSchema(BaseModel):
+    """User selects a device by name when the requested device is not found."""
+
+    device_name: str
+
+
+class _SubnetChoiceSchema(BaseModel):
+    """User provides the subnet to scan when none is configured."""
+
+    subnet: str
 
 
 async def _reconnect_device_from_cache(identifier: str) -> Any | None:
@@ -353,6 +366,7 @@ async def scan_network(
     subnet: str | None = None,
     timeout: float | None = None,
     max_workers: int | None = None,
+    ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Scan network for WeMo devices using pywemo discovery.
 
@@ -366,6 +380,7 @@ async def scan_network(
         subnet: Network subnet in CIDR notation (default: from config or "192.168.1.0/24")
         timeout: Connection timeout in seconds for port probing (default: from config or 0.6)
         max_workers: Maximum concurrent workers for network scanning (default: from config or 60)
+        ctx: MCP context injected by FastMCP; used to elicit the subnet when none is configured
 
     Returns:
     -------
@@ -380,7 +395,22 @@ async def scan_network(
 
     # Use config defaults if not provided
     if subnet is None:
-        subnet = config.get("network", "default_subnet", "192.168.1.0/24")
+        config_subnet = config.get("network", "default_subnet", "192.168.1.0/24")
+        if config_subnet == "192.168.1.0/24" and ctx is not None:
+            # No custom subnet configured — ask the user rather than scanning the wrong network
+            elicit_result = await ctx.elicit(
+                "No subnet is configured. Which subnet should I scan? "
+                "(e.g. 192.168.1.0/24 — check your router for your local network range)",
+                schema=_SubnetChoiceSchema,
+            )
+            if elicit_result.action == "accept" and elicit_result.data:
+                subnet = elicit_result.data.subnet
+            elif elicit_result.action != "accept":
+                return {"error": "Scan cancelled by user", "scan_completed": False}
+            else:
+                subnet = config_subnet
+        else:
+            subnet = config_subnet
     if timeout is None:
         timeout = config.get("network", "scan_timeout", 0.6)
     if max_workers is None:
@@ -918,6 +948,7 @@ async def control_device(
     device_identifier: str,
     action: str,
     brightness: int | None = None,
+    ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Control a WeMo device (turn on, off, toggle, or set brightness).
 
@@ -930,6 +961,7 @@ async def control_device(
         device_identifier: Device name (e.g., "Office Light") or IP address (e.g., "192.168.1.100")
         action: Action to perform - must be one of: "on", "off", "toggle", "brightness"
         brightness: Brightness level (1-100) - only used when action is "brightness" or "on" for dimmer devices
+        ctx: MCP context injected by FastMCP; used to elicit the correct device when identifier is ambiguous
 
     Returns:
     -------
@@ -965,16 +997,36 @@ async def control_device(
             device = await _reconnect_device_from_cache(params.device_identifier)
 
         if not device:
-            return {
-                "error": f"Device '{params.device_identifier}' not found in cache",
-                "suggestion": "Run scan_network first to discover devices",
-                "available_devices": [
-                    k
-                    for k in _device_cache
-                    if isinstance(k, str) and not k.replace(".", "").isdigit()
-                ],
-                "success": False,
-            }
+            available_names = [
+                k for k in _device_cache if isinstance(k, str) and not k.replace(".", "").isdigit()
+            ]
+            if ctx is not None and available_names:
+                # Elicit: find closest matches first, fall back to first 5
+                partial_matches = [
+                    n for n in available_names if params.device_identifier.lower() in n.lower()
+                ]
+                suggestions = partial_matches or available_names[:5]
+                elicit_result = await ctx.elicit(
+                    f"Device '{params.device_identifier}' not found. "
+                    f"Did you mean one of these: {', '.join(suggestions)}?",
+                    schema=_DeviceChoiceSchema,
+                )
+                if elicit_result.action == "accept" and elicit_result.data:
+                    chosen = elicit_result.data.device_name
+                    device = _device_cache.get(chosen)
+                    if device:
+                        params = ControlDeviceParams(
+                            device_identifier=chosen,
+                            action=params.action,
+                            brightness=params.brightness,
+                        )
+            if not device:
+                return {
+                    "error": f"Device '{params.device_identifier}' not found in cache",
+                    "suggestion": "Run scan_network first to discover devices",
+                    "available_devices": available_names,
+                    "success": False,
+                }
 
         # Check if device is a dimmer
         is_dimmer = hasattr(device, "set_brightness") and hasattr(device, "get_brightness")
