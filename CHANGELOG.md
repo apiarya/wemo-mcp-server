@@ -5,6 +5,14 @@ All notable changes to the WeMo MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-02-22
+
+### Fixed
+- 🔧 **Code quality: duplicate string literals (S1192)** - Extracted `DEFAULT_SUBNET`, `ERR_INVALID_PARAMS`, and `ERR_RUN_SCAN_FIRST` as module-level constants, eliminating 12 duplicated string literals across `server.py`
+- 🔧 **Bare `except:` clause (S5754)** - Changed to `except Exception:` in `_probe_ip_port()` for explicit exception handling
+
+---
+
 ## [1.4.0] - 2026-02-22
 
 ### Added
