@@ -63,8 +63,8 @@ jobs:
         with:
           packages-dir: dist/
           print-hash: true
-          # Using trusted publishing (OIDC) - configured at https://pypi.org/manage/account/publishing/
-          # Publisher setup: apiarya/wemo-mcp-server -> pypi-publish.yml
+          # Using trusted publishing (OIDC) - configured at https://pypi.org/manage/project/wemo-mcp-server/settings/publishing/
+          # Publisher setup: apiarya/wemo-mcp-server -> release.yml
 
       - name: Wait for PyPI to index package
         run: |

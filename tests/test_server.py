@@ -306,7 +306,7 @@ class TestMCPToolsHappyPath:
 
         assert result["device_count"] == 2  # 2 unique devices
         assert len(result["devices"]) == 2
-        assert result["cache_keys"] == 4  # 4 total cache entries (name + IP for each)
+        assert "cache_keys" not in result  # raw key count is an internal detail, not exposed
 
         device_names = {d["name"] for d in result["devices"]}
         assert "Living Room" in device_names
