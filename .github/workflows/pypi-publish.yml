@@ -1,4 +1,4 @@
-name: Publish to PyPI
+name: Publish to PyPI and MCP Registry
 
 on:
   release:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write  # Required for trusted publishing
+      id-token: write  # Required for trusted publishing (PyPI + MCP Registry)
 
     steps:
       - name: Checkout code
@@ -66,11 +66,48 @@ jobs:
           # Using trusted publishing (OIDC) - configured at https://pypi.org/manage/account/publishing/
           # Publisher setup: apiarya/wemo-mcp-server -> pypi-publish.yml
 
+      - name: Wait for PyPI to index package
+        run: |
+          echo "⏳ Waiting 30 seconds for PyPI to index the new version..."
+          sleep 30
+
+      - name: Install mcp-publisher
+        run: |
+          echo "📥 Installing mcp-publisher CLI..."
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz
+          chmod +x mcp-publisher
+          ./mcp-publisher --version
+
+      - name: Authenticate with MCP Registry (OIDC)
+        run: |
+          echo "🔐 Authenticating with MCP Registry using GitHub OIDC..."
+          ./mcp-publisher login github-oidc
+
+      - name: Verify server.json version
+        run: |
+          SERVER_VERSION=$(grep '"version"' server.json | sed 's/.*"version": "\(.*\)".*/\1/')
+          TAG_VERSION="${{ steps.version.outputs.version }}"
+          if [ "$SERVER_VERSION" != "$TAG_VERSION" ]; then
+            echo "❌ Version mismatch in server.json!"
+            echo "   server.json: $SERVER_VERSION"
+            echo "   Git tag: $TAG_VERSION"
+            exit 1
+          fi
+          echo "✅ server.json version verified: $SERVER_VERSION"
+
+      - name: Publish to MCP Registry
+        run: |
+          echo "📤 Publishing to MCP Registry..."
+          ./mcp-publisher publish server.json
+          echo "✅ Successfully published to MCP Registry"
+
       - name: Create release summary
         run: |
-          echo "## 🎉 Published to PyPI" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎉 Published Successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 PyPI" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Install command:**" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
@@ -80,5 +117,12 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**PyPI page:** https://pypi.org/project/wemo-mcp-server/${{ steps.version.outputs.version }}/" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌐 MCP Registry" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry page:** https://registry.modelcontextprotocol.io/?q=apiarya/wemo" >> $GITHUB_STEP_SUMMARY
+          echo "**Server name:** \`io.github.apiarya/wemo\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Repository:** https://github.com/apiarya/wemo-mcp-server" >> $GITHUB_STEP_SUMMARY

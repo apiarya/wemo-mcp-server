@@ -1,8 +1,11 @@
 # MCP Registry Submission Instructions
 
-## Status: ✅ Published
+## Status: ✅ Published & Automated
 
 The WeMo MCP Server has been successfully published to the official MCP Registry from the dedicated repository at `apiarya/wemo-mcp-server`.
+
+**🤖 Publishing is now fully automated via GitHub Actions!**  
+New releases are automatically published to both PyPI and MCP Registry when you create a GitHub release.
 
 ## Registry Namespace
 
@@ -16,7 +19,19 @@ The WeMo MCP Server has been successfully published to the official MCP Registry
 - **v1.1.0** - Initial release from new repository
 - **v1.0.1** - Legacy release from `qrussell/wemo-ops-center/mcp` (deprecated)
 
-## For Future Updates
+## Automated Publishing Process
+
+As of v1.1.1+, publishing to MCP Registry is **fully automated** via GitHub Actions:
+
+1. **Create a GitHub release** (tag format: `vX.Y.Z`)
+2. **Workflow runs automatically** and publishes to both PyPI and MCP Registry
+3. **Verify publication** at https://registry.modelcontextprotocol.io/?q=apiarya/wemo
+
+No manual steps needed! 🎉
+
+## Manual Publishing (Fallback)
+
+If you ever need to manually publish (e.g., workflow failure):
 
 ### 1. Install mcp-publisher CLI
 

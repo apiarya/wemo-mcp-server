@@ -135,51 +135,56 @@ Trusted publishing uses GitHub OIDC tokens instead of API keys - more secure and
    uvx wemo-mcp-server
    ```
 
-### Step 4: Publish to MCP Registry
+### Step 4: Verify Publication
 
-Once published and tested on PyPI, submit to the official MCP Registry:
+**✅ AUTOMATED:** MCP Registry publishing happens automatically via GitHub Actions!
 
-1. **Install mcp-publisher CLI**:
+After the GitHub release workflow completes (typically 2-3 minutes), verify publication:
+
+1. **Check workflow status**:
+   - Go to: https://github.com/apiarya/wemo-mcp-server/actions
+   - Verify "Publish to PyPI and MCP Registry" workflow completed successfully
+   - Review the step summary for PyPI and MCP Registry links
+
+2. **Verify PyPI**:
    ```bash
-   # macOS/Linux
-   curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher && sudo mv mcp-publisher /usr/local/bin/
+   # Check PyPI page
+   curl "https://pypi.org/pypi/wemo-mcp-server/json" | jq '.info.version'
    
-   # Or via Homebrew
-   brew install mcp-publisher
-   
-   # Verify installation
-   mcp-publisher --help
+   # Or visit: https://pypi.org/project/wemo-mcp-server/
    ```
 
-2. **Authenticate with GitHub**:
-   ```bash
-   mcp-publisher login github
-   ```
-   
-   Follow the prompts to authenticate via GitHub device flow.
-
-3. **Publish to registry**:
-   ```bash
-   cd mcp
-   mcp-publisher publish
-   ```
-   
-   This uses the `server.json` file in the mcp directory.
-
-4. **Verify registration**:
+3. **Verify MCP Registry**:
    ```bash
    # Search for your server
    curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=wemo"
-   ```
    
-   Or visit: https://registry.modelcontextprotocol.io/
+   # Or visit: https://registry.modelcontextprotocol.io/?q=apiarya/wemo
+   ```
 
-**Note:** The `server.json` file is already configured with:
-- Name: `io.github.apiarya/wemo`
-- PyPI package: `wemo-mcp-server`
-- Repository: `https://github.com/apiarya/wemo-mcp-server`
+4. **Test installation**:
+   ```bash
+   # Test with pip
+   pip install --upgrade wemo-mcp-server
+   
+   # Test with uvx
+   uvx wemo-mcp-server@${{ steps.version.outputs.version }}
+   ```
 
-The registry validates that the PyPI package exists and matches the specified version before accepting the submission.
+**Note:** The workflow automatically:
+- ✅ Publishes to PyPI using trusted publishing (OIDC)
+- ✅ Waits for PyPI indexing
+- ✅ Authenticates with MCP Registry using GitHub OIDC
+- ✅ Publishes to MCP Registry
+- ✅ Verifies version consistency across all files
+
+**Manual Publishing (Only if workflow fails):**
+If you need to manually publish to MCP Registry:
+```bash
+brew install mcp-publisher
+mcp-publisher login github
+mcp-publisher publish server.json
+```
 
 
 ## Subsequent Releases

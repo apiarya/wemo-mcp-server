@@ -27,20 +27,22 @@
 - [ ] Wait for workflow to complete
 
 ### Verification
+- [ ] Monitor workflow: https://github.com/apiarya/wemo-mcp-server/actions
+- [ ] Wait for workflow completion (~2-3 minutes)
 - [ ] Verify on PyPI: https://pypi.org/project/wemo-mcp-server/
+- [ ] Verify on MCP Registry: https://registry.modelcontextprotocol.io/?q=apiarya/wemo
 - [ ] Test install: `pip install wemo-mcp-server==X.X.X`
 - [ ] Test with uvx: `uvx wemo-mcp-server`
+- [ ] Test with MCP client (Claude Desktop, VS Code, etc.)
 
 ## After First Stable Release (v1.0.0)
 
-- [ ] Publish to MCP Registry:
-  - [ ] Install mcp-publisher: `brew install mcp-publisher` (or download from releases)
-  - [ ] Authenticate: `mcp-publisher login github`
-  - [ ] Publish: `cd mcp && mcp-publisher publish`
-  - [ ] Verify at https://registry.modelcontextprotocol.io/v0.1/servers?search=wemo
+- [ ] ✅ **Publishing is automated** - Both PyPI and MCP Registry publish automatically!
 - [ ] Share on social media / community forums
 - [ ] Monitor issues and user feedback
 - [ ] Update documentation if needed
+
+**Note:** MCP Registry publishing is now fully automated via GitHub Actions using OIDC authentication.
 
 ## Quick Commands
 
