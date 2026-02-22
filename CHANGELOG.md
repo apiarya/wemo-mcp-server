@@ -5,6 +5,80 @@ All notable changes to the WeMo MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-21
+
+### 🚀 Phase 2: Production-Grade Features
+
+Major enhancement release adding error handling, persistent caching, and full configuration management.
+
+### Added
+- ✨ **3 New MCP Tools** (9 total, up from 6)
+  - `get_cache_info` - Inspect cache status, age, and TTL
+  - `clear_cache` - Force cache refresh
+  - `get_configuration` - View current settings
+- 🔄 **Automatic Retry Logic** - Exponential backoff for device operations
+  - 3 retry attempts by default
+  - Configurable retry delay (default: 0.5s, doubles each retry)
+  - Applied to all network/device operations
+- 💾 **Persistent Device Cache** 
+  - JSON-based cache at `~/.wemo_mcp_cache.json`
+  - 1-hour TTL (configurable)
+  - Survives server restarts
+  - 26+ cache entries per device (full metadata)
+- ⚙️ **Configuration Management**
+  - YAML config file support (`config.yaml`, requires optional `pyyaml`)
+  - Environment variable overrides (`WEMO_MCP_*` prefix)
+  - 11 configurable settings (network, cache, logging)
+  - Priority: env vars > YAML > defaults
+- 🛡️ **Enhanced Error Handling**
+  - Error classification (network, device, configuration)
+  - Actionable error messages with suggestions
+  - Graceful degradation for cache/config failures
+- 📝 **Input Validation** - Pydantic models for all tool inputs
+  - `ScanNetworkInput`, `DeviceIdentifierInput`
+  - `ControlDeviceInput`, `RenameDeviceInput`
+  - Automatic validation with clear error messages
+- 📚 **Documentation**
+  - `CONFIGURATION.md` - Comprehensive configuration guide (400+ lines)
+  - `config.example.yaml` - Full YAML template with examples
+  - `.env.example` - Environment variable template
+
+### Changed
+- 📦 **server.py** - Expanded from 701 to 1100+ lines
+  - Integrated error handling, caching, and configuration
+  - Better code organization with helper modules
+- 🧪 **Test Suite** - Expanded from 30 to 56 tests
+  - Added 26 tests for Pydantic models
+  - Coverage: 63.64% overall (78% for server.py)
+  - All tests pass in ~3-5 seconds
+- 📖 **README.md** - Updated with Phase 2 features
+  - Added Configuration section with env vars table
+  - Documented 3 new MCP tools
+  - Updated Key Features (7 → 10 features)
+  - Added quick config examples
+
+### Performance
+- ⚡ **Faster Startup** - Cache eliminates scan on repeated operations
+- 🔄 **Better Reliability** - Retry logic handles transient network issues
+- 🎯 **Optimized Scanning** - Configurable workers and timeout
+- 💾 **Reduced Network Traffic** - Cache reduces repeated device queries
+
+### Technical
+- 📦 **New Modules**
+  - `src/wemo_mcp_server/error_handling.py` (205 lines)
+  - `src/wemo_mcp_server/cache.py` (222 lines)  
+  - `src/wemo_mcp_server/config.py` (242 lines)
+- 🔍 **Dependencies**
+  - `pydantic>=2.0.0` - Input validation
+  - `pyyaml>=6.0.0` - YAML config support (optional)
+
+### Validated
+- ✅ **E2E Testing** - All features validated with 13 real WeMo devices
+  - scan_network: 20.49s scan time
+  - Persistent cache: 26 entries saved
+  - Retry logic: Handled device timeouts
+  - Configuration: Loaded from env vars
+
 ## [1.2.0] - 2026-02-21
 
 ### 🏆 Repository Restructuring - Production Standards

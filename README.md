@@ -19,6 +19,7 @@ Control WeMo smart home devices through AI assistants using natural language.
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Connect](#connect)
+- [Configuration](#configuration)
 - [MCP Tools](#mcp-tools)
   - [scan_network](#1-scan_network)
   - [list_devices](#2-list_devices)
@@ -26,6 +27,9 @@ Control WeMo smart home devices through AI assistants using natural language.
   - [control_device](#4-control_device)
   - [rename_device](#5-rename_device)
   - [get_homekit_code](#6-get_homekit_code)
+  - [get_cache_info](#7-get_cache_info)
+  - [clear_cache](#8-clear_cache)
+  - [get_configuration](#9-get_configuration)
 - [How It Works](#how-it-works)
 - [Feature Comparison](#feature-comparison)
 - [Development](#development)
@@ -50,7 +54,10 @@ Seamlessly integrate WeMo smart home devices with AI assistants through the Mode
 - **🎛️ Full Control** - On/off/toggle/brightness control for all device types  
 - **✏️ Device Management** - Rename devices and extract HomeKit setup codes
 - **📊 Real-time Status** - Query device state and brightness
-- **💾 Smart Caching** - Automatic device caching for instant access
+- **💾 Smart Caching** - Persistent device cache with 1-hour TTL survives restarts
+- **🔧 Configurable** - YAML config files + environment variables for all settings
+- **🔄 Auto-Retry** - Automatic retry with exponential backoff for network errors
+- **🛡️ Error Handling** - Detailed error messages with actionable suggestions
 - **🔌 Universal** - Works with any MCP client (Claude, VS Code, Cursor, etc.)
 
 ---
@@ -228,6 +235,67 @@ Reload VS Code after saving.
 
 ---
 
+## Configuration
+
+The WeMo MCP Server supports flexible configuration through YAML files and environment variables.
+
+### Quick Configuration
+
+**Using Environment Variables** (simplest):
+```bash
+export WEMO_MCP_DEFAULT_SUBNET="192.168.1.0/24"
+export WEMO_MCP_CACHE_TTL=7200
+export WEMO_MCP_LOG_LEVEL=DEBUG
+```
+
+**Using YAML Config File**:
+```bash
+# Copy example config and customize
+cp config.example.yaml config.yaml
+# Edit config.yaml with your settings
+```
+
+### Configuration Options
+
+| Setting | Environment Variable | Default | Description |
+|---------|---------------------|---------|-------------|
+| **Network** ||||
+| Default subnet | `WEMO_MCP_DEFAULT_SUBNET` | `192.168.1.0/24` | Network to scan for devices |
+| Scan timeout | `WEMO_MCP_SCAN_TIMEOUT` | `0.6` | Port probe timeout (seconds) |
+| Max workers | `WEMO_MCP_MAX_WORKERS` | `60` | Concurrent scanning threads |
+| **Cache** ||||
+| Enable cache | `WEMO_MCP_CACHE_ENABLED` | `true` | Persistent device caching |
+| Cache file | `WEMO_MCP_CACHE_FILE` | `~/.wemo_mcp_cache.json` | Cache file location |
+| Cache TTL | `WEMO_MCP_CACHE_TTL` | `3600` | Cache lifetime (seconds) |
+| **Logging** ||||
+| Log level | `WEMO_MCP_LOG_LEVEL` | `INFO` | DEBUG, INFO, WARNING, ERROR |
+
+### Example Configurations
+
+**Large Network** (multiple subnets):
+```bash
+export WEMO_MCP_DEFAULT_SUBNET="10.0.0.0/16"
+export WEMO_MCP_SCAN_TIMEOUT=1.0
+export WEMO_MCP_MAX_WORKERS=100
+```
+
+**Debug Mode**:
+```bash
+export WEMO_MCP_LOG_LEVEL=DEBUG
+export WEMO_MCP_CACHE_TTL=300  # 5 minutes
+```
+
+**Disable Caching**:
+```bash
+export WEMO_MCP_CACHE_ENABLED=false
+```
+
+See [config.example.yaml](config.example.yaml) and [.env.example](.env.example) for complete configuration templates.
+
+For detailed configuration guide, see [CONFIGURATION.md](CONFIGURATION.md).
+
+---
+
 ## MCP Tools
 
 ### 1. scan_network
@@ -341,6 +409,72 @@ Use this code to add the device to Apple Home.
 ```
 
 **Note:** Not all WeMo devices support HomeKit. If a device doesn't support HomeKit, you'll get an error message.
+
+### 7. get_cache_info
+
+Get information about the persistent device cache.
+
+**Example Prompts:**
+- "Show me cache information"
+- "Is the device cache expired?"
+- "How many devices are cached?"
+
+**Example Response:**
+```
+Device Cache Status:
+  ✅ Cache exists
+  📁 Location: ~/.wemo_mcp_cache.json
+  📊 Devices: 12
+  ⏰ Age: 1,234 seconds (20.6 minutes)
+  💾 TTL: 3,600 seconds (1 hour)
+  ✅ Status: Valid (not expired)
+```
+
+### 8. clear_cache
+
+Clear the persistent device cache to force a fresh scan.
+
+**Example Prompts:**
+- "Clear the device cache"
+- "Reset the cache and rescan"
+- "Delete cached devices"
+
+**Example Response:**
+```
+✅ Cache cleared successfully
+Next scan will discover devices fresh.
+Run scan_network to rebuild the cache.
+```
+
+**Note:** This clears both the persistent cache file and in-memory cache. After clearing, run `scan_network` to rediscover devices.
+
+### 9. get_configuration
+
+View current server configuration settings.
+
+**Example Prompts:**
+- "Show me the server configuration"
+- "What are the current settings?"
+- "Display configuration"
+
+**Example Response:**
+```
+Current Configuration:
+  Network:
+    • Default subnet: 192.168.1.0/24
+    • Scan timeout: 0.6 seconds
+    • Max workers: 60
+  Cache:
+    • Enabled: true
+    • File: ~/.wemo_mcp_cache.json
+    • TTL: 3600 seconds (1 hour)
+  Logging:
+    • Level: INFO
+```
+
+**Note:** Shows all configuration including defaults and environment variable overrides. Use environment variables with `WEMO_MCP_` prefix to customize.
+
+---
 
 ## How It Works
 
