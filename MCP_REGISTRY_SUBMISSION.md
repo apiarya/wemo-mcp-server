@@ -1,21 +1,22 @@
 # MCP Registry Submission Instructions
 
-## Status: Ready for Publication ✅
+## Status: ✅ Published
 
-The WeMo MCP Server is ready for submission to the official MCP Registry from its new dedicated repository at `apiarya/wemo-mcp-server`.
+The WeMo MCP Server has been successfully published to the official MCP Registry from the dedicated repository at `apiarya/wemo-mcp-server`.
 
-## Registry Namespace Considerations
+## Registry Namespace
 
-**Current Registration:** `io.github.qrussell/wemo` (from original repository)
+**Current Registration:** `io.github.apiarya/wemo` (v1.1.1) - **Active** ✅
 
-**Options for Migration:**
-1. **Transfer namespace** - Have @qrussell transfer `io.github.qrussell/wemo` ownership in registry (recommended for continuity)
-2. **New namespace** - Register as `io.github.apiarya/wemo` (cleaner separation)
-3. **Coordinate republish** - Have @qrussell republish from new repo location
+**Legacy Registration:** `io.github.qrussell/wemo` (v1.0.1) - Remains for backwards compatibility
 
-**Recommended:** Coordinate with @qrussell before publishing to determine best namespace approach.
+## Publication History
 
-## Steps for @qrussell
+- **v1.1.1** - Published February 22, 2026 with new namespace `io.github.apiarya/wemo`
+- **v1.1.0** - Initial release from new repository
+- **v1.0.1** - Legacy release from `qrussell/wemo-ops-center/mcp` (deprecated)
+
+## For Future Updates
 
 ### 1. Install mcp-publisher CLI
 
@@ -66,7 +67,7 @@ Expected output:
 ```
 Publishing to https://registry.modelcontextprotocol.io...
 ✓ Successfully published
-✓ Server io.github.qrussell/wemo version 1.0.0
+✓ Server io.github.apiarya/wemo version 1.1.1
 ```
 
 ### 6. Verify publication

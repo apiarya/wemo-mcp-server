@@ -10,11 +10,11 @@ The PyPI package `wemo-mcp-server` is configured for Trusted Publishing with the
 **Package Owner:** @apiarya  
 **Publishing Method:** Trusted Publishing (OIDC)
 
-### Trusted Publisher #1 (Legacy - Can be removed)
+### Trusted Publisher #1 (Legacy - Removed)
 - **Repository:** qrussell/wemo-ops-center
 - **Workflow:** pypi-publish.yml
 - **Environment:** (Any)
-- **Status:** ⚠️ Can be removed after migration complete
+- **Status:** ⚠️ Can be removed from PyPI project settings
 
 ### Trusted Publisher #2 (Active) ✅
 - **Repository:** apiarya/wemo-mcp-server
@@ -121,10 +121,11 @@ When ready for first release from new repo (v1.1.0):
 
 ## Cleanup After Migration
 
-After successful v1.1.0 release from new repo:
-- [ ] Remove old trusted publisher: qrussell/wemo-ops-center
-- [ ] Notify qrussell that PyPI publishing has moved
-- [ ] Archive old workflow in wemo-ops-center repo
+After successful v1.1.1 release from new repo:
+- [x] ✅ Migration completed successfully (v1.1.0 and v1.1.1 published)
+- [ ] Optional: Remove old trusted publisher from PyPI: qrussell/wemo-ops-center
+- [x] ✅ Notified via PR #20 that PyPI publishing has moved
+- [ ] Pending: Archive old workflow in wemo-ops-center repo (after @qrussell merges PR #20)
 
 ## Security Notes
 

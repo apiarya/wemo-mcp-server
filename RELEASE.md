@@ -17,8 +17,8 @@ Trusted publishing uses GitHub OIDC tokens instead of API keys - more secure and
 1. Go to https://pypi.org/manage/account/publishing/
 2. Add a new pending publisher with these details:
    - **PyPI Project Name:** `wemo-mcp-server`
-   - **Owner:** `qrussell` (or your GitHub username)
-   - **Repository name:** `wemo-ops-center`
+   - **Owner:** `apiarya` (your GitHub username)
+   - **Repository name:** `wemo-mcp-server`
    - **Workflow name:** `pypi-publish.yml`
    - **Environment name:** *(leave blank)*
 
@@ -175,7 +175,7 @@ Once published and tested on PyPI, submit to the official MCP Registry:
    Or visit: https://registry.modelcontextprotocol.io/
 
 **Note:** The `server.json` file is already configured with:
-- Name: `io.github.qrussell/wemo` (or will be updated to apiarya namespace)
+- Name: `io.github.apiarya/wemo`
 - PyPI package: `wemo-mcp-server`
 - Repository: `https://github.com/apiarya/wemo-mcp-server`
 
