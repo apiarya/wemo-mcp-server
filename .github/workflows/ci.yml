@@ -129,6 +129,6 @@ jobs:
             --cov=wemo_mcp_server --cov-report=xml -q
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
