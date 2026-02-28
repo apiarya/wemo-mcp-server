@@ -39,6 +39,7 @@ Control WeMo smart home devices through AI assistants using natural language.
   - [Prompts](#prompts)
   - [Elicitations](#elicitations)
 - [How It Works](#how-it-works)
+  - [Local Control Signal Flow](#local-control-signal-flow)
 - [Feature Comparison](#feature-comparison)
 - [Development](#development)
 - [Contributing](#contributing)
@@ -587,6 +588,44 @@ The server uses a three-phase discovery process optimized for reliability:
    - Validates and extracts device information
 
 This approach achieves **100% device discovery reliability** while maintaining fast scan times (23-30 seconds for complete networks).
+
+### Local Control Signal Flow
+
+All device commands travel exclusively over your **local network** — no cloud hop required at any stage.
+
+**Voice path (Google Home + WeMo):**
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant GH as Google Home Hub
+    participant GC as Google Cloud (ASR only)
+    participant WD as WeMo Device
+
+    U->>GH: "Hey Google, turn on chandelier"
+    GH->>GC: Audio stream for speech-to-text
+    GC-->>GH: Intent: {action: ON, device: chandelier}
+    GH->>WD: Matter OnOff.On (UDP 5540, LAN)
+    WD-->>GH: ACK
+    GH-->>U: "OK, turning on chandelier"
+```
+
+**MCP path (AI assistant + this server):**
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant AI as AI Assistant
+    participant MS as MCP Server
+    participant WD as WeMo Device
+
+    U->>AI: "Turn on the desk light"
+    AI->>MS: tools/call control_device("desk light", "on")
+    MS->>WD: UPnP/SOAP BinaryState=1 (TCP 49153, LAN)
+    WD-->>MS: HTTP 200 OK
+    MS-->>AI: {success: true, state: "on"}
+    AI-->>U: "Desk light is now on!"
+```
+
+Both paths use **local protocols only** after the initial voice recognition (Google Cloud handles speech-to-text; Belkin's cloud is never involved).
 
 ## Feature Comparison
 

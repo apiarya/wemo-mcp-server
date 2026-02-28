@@ -1,0 +1,46 @@
+# Smithery configuration file: https://smithery.ai/docs/build/project-config
+
+startCommand:
+  type: stdio
+  commandFunction: |-
+    (config) => ({
+      command: 'uvx',
+      args: ['wemo-mcp-server'],
+      env: {
+        ...(config.defaultSubnet ? { WEMO_MCP_DEFAULT_SUBNET: config.defaultSubnet } : {}),
+        ...(config.cacheDir ? { WEMO_MCP_CACHE_DIR: config.cacheDir } : {}),
+        ...(config.scanTimeout ? { WEMO_MCP_SCAN_TIMEOUT: String(config.scanTimeout) } : {}),
+        ...(config.maxWorkers ? { WEMO_MCP_MAX_WORKERS: String(config.maxWorkers) } : {})
+      }
+    })
+  configSchema:
+    type: object
+    properties:
+      defaultSubnet:
+        type: string
+        title: Network Subnet
+        description: >-
+          The subnet to scan for WeMo devices in CIDR notation
+          (e.g. 192.168.1.0/24). Defaults to 192.168.1.0/24.
+        default: "192.168.1.0/24"
+      scanTimeout:
+        type: number
+        title: Scan Timeout (seconds)
+        description: Connection timeout per port probe during network scan. Default is 0.6s.
+        default: 0.6
+      maxWorkers:
+        type: integer
+        title: Max Scan Workers
+        description: Maximum concurrent workers for parallel network scanning. Default is 60.
+        default: 60
+      cacheDir:
+        type: string
+        title: Cache Directory
+        description: >-
+          Directory to store the persistent device cache JSON file.
+          Defaults to the system user config directory.
+
+exampleConfig:
+  defaultSubnet: "192.168.1.0/24"
+  scanTimeout: 0.6
+  maxWorkers: 60
