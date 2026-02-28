@@ -1,0 +1,167 @@
+{
+  "serverInfo": {
+    "name": "WeMo MCP Server",
+    "version": "1.4.0"
+  },
+  "authentication": {
+    "required": false
+  },
+  "tools": [
+    {
+      "name": "scan_network",
+      "description": "Scan network for WeMo devices using pywemo discovery. Probes all IPs in the subnet on common WeMo ports (49152-49155), verifies responsive IPs, and uses the pywemo library to identify and parse WeMo devices.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subnet": {
+            "type": "string",
+            "description": "Network subnet in CIDR notation (default: \"192.168.1.0/24\")"
+          },
+          "timeout": {
+            "type": "number",
+            "description": "Connection timeout in seconds for port probing (default: 0.6)"
+          },
+          "max_workers": {
+            "type": "integer",
+            "description": "Maximum concurrent workers for network scanning (default: 60)"
+          }
+        }
+      }
+    },
+    {
+      "name": "list_devices",
+      "description": "List all discovered WeMo devices from the cache. Returns a list of devices found in previous network scans.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get_device_status",
+      "description": "Get the current state and information for a specific WeMo device by name or IP address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "device_identifier": {
+            "type": "string",
+            "description": "Device name (e.g., \"Office Light\") or IP address (e.g., \"192.168.1.100\")"
+          }
+        },
+        "required": ["device_identifier"]
+      }
+    },
+    {
+      "name": "control_device",
+      "description": "Control a WeMo device — turn it on, off, toggle it, or adjust brightness for dimmers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "device_identifier": {
+            "type": "string",
+            "description": "Device name (e.g., \"Office Light\") or IP address"
+          },
+          "action": {
+            "type": "string",
+            "enum": ["on", "off", "toggle", "brightness"],
+            "description": "Action to perform on the device"
+          },
+          "brightness": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Brightness level 1-100 (only for 'brightness' action on dimmers)"
+          }
+        },
+        "required": ["device_identifier", "action"]
+      }
+    },
+    {
+      "name": "rename_device",
+      "description": "Rename a WeMo device, changing its friendly name in both the cache and on the device itself.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "device_identifier": {
+            "type": "string",
+            "description": "Current device name or IP address"
+          },
+          "new_name": {
+            "type": "string",
+            "description": "New friendly name for the device"
+          }
+        },
+        "required": ["device_identifier", "new_name"]
+      }
+    },
+    {
+      "name": "get_homekit_code",
+      "description": "Get the HomeKit setup code for a WeMo device. Not all devices support HomeKit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "device_identifier": {
+            "type": "string",
+            "description": "Device name (e.g., \"Office Light\") or IP address (e.g., \"192.168.1.100\")"
+          }
+        },
+        "required": ["device_identifier"]
+      }
+    },
+    {
+      "name": "get_cache_info",
+      "description": "Get information about the persistent device cache, including age, expiration status, and number of devices stored.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "clear_cache",
+      "description": "Clear both the persistent and in-memory device cache. After clearing, run scan_network to rebuild.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get_configuration",
+      "description": "Get the current server configuration as JSON, including network parameters, cache settings, and logging levels.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "devices://",
+      "name": "Device Index",
+      "description": "JSON index of all cached WeMo devices",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "device://{device_id}",
+      "name": "Device State",
+      "description": "Live state for a specific device (name or IP, URL-encoded)",
+      "mimeType": "application/json"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "discover-devices",
+      "description": "Guided network scan with subnet selection"
+    },
+    {
+      "name": "device-status-report",
+      "description": "Summary report of all device states"
+    },
+    {
+      "name": "activate-scene",
+      "description": "Control multiple devices as a scene"
+    },
+    {
+      "name": "troubleshoot-device",
+      "description": "Step-by-step device troubleshooting"
+    }
+  ]
+}
