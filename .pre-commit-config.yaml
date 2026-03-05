@@ -36,7 +36,7 @@ repos:
     hooks:
       - id: pytest
         name: pytest
-        entry: .venv/bin/python -m pytest tests/test_server.py tests/test_phase2.py tests/test_models.py -q --tb=short
+        entry: .venv/bin/python -m pytest tests/test_server.py tests/test_phase2.py tests/test_models.py -q --tb=short --timeout=30
         language: system
         pass_filenames: false
         always_run: true
