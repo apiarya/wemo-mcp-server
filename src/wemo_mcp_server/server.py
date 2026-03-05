@@ -1587,7 +1587,7 @@ h2{font-size:16px;font-weight:700;margin-bottom:14px;
 .name{font-weight:600;font-size:14px;margin-bottom:2px;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .meta{font-size:11px;color:#94a3b8;margin-bottom:10px}
-btn-row{display:flex;gap:6px}
+.btn-row{display:flex;gap:6px}
 button{flex:1;padding:7px;border:none;border-radius:8px;cursor:pointer;
        font-size:13px;font-weight:500;background:#3b82f6;color:#fff;
        transition:background .15s}
@@ -1681,11 +1681,11 @@ async def show_device_dashboard() -> list[UIResource]:  # type: ignore[return]
                 f'<div class="card">'
                 f'<div class="name" title="{nh}">{nh}</div>'
                 f'<div class="meta">{_h(d["host"])} &middot; {_h(d["model"])}</div>'
-                f"<btn-row>"
+                f'<div class="btn-row">'
                 f"<button onclick=\"doOn('{nj}',this)\">On</button>"
                 f"<button onclick=\"doOff('{nj}',this)\">Off</button>"
                 f"<button onclick=\"doToggle('{nj}',this)\">Toggle</button>"
-                f"</btn-row></div>"
+                f"</div></div>"
             )
         count_badge = f'<span class="badge">{len(devices)}</span>'
         grid = '<div class="grid">' + "".join(card_parts) + "</div>"
