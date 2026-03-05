@@ -48,6 +48,11 @@ A 5-second local test run would have caught it immediately.
 - **Version**: v1.4.0 (stable)
 - **Status**: Production • Published on PyPI and MCP Registry
 
+## Roadmap
+Planned features and improvements are tracked in **[TODO.md](../TODO.md)** at the repo root.
+Key upcoming work: MCP Progress Notifications, MCP Sampling, Remote Transport + OAuth 2.1, Smithery deployment.
+When implementing any of these, refer to TODO.md for context and update its status table when done.
+
 ## Project Type & Architecture
 - **Type**: Model Context Protocol (MCP) Server
 - **Framework**: FastMCP (mcp>=1.2.0)
