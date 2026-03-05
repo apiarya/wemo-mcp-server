@@ -29,6 +29,7 @@ classifiers = [
 dependencies = [
     "mcp>=1.2.0",
     "httpx>=0.25.0",
+    "mcp-ui-server>=1.0.0",
     "pywemo>=1.4.0",
     "pydantic>=2.0.0",
 ]

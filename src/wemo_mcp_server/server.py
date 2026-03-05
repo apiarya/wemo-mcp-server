@@ -13,6 +13,8 @@ from urllib.parse import unquote
 
 import pywemo
 from mcp.server.fastmcp import Context, FastMCP
+from mcp_ui_server import create_ui_resource
+from mcp_ui_server.core import UIResource
 from pydantic import BaseModel, ValidationError
 
 from .cache import _cache_manager, serialize_device
@@ -1562,6 +1564,250 @@ async def prompt_troubleshoot_device(
             ),
         }
     ]
+
+
+# ---------------------------------------------------------------------------
+# MCP Apps: interactive UI tools
+# Renders inline in Claude Desktop, VS Code, ChatGPT, Goose and other
+# MCP Apps-compatible hosts.  Text-only equivalents: list_devices,
+# get_device_status, control_device.
+# ---------------------------------------------------------------------------
+
+_DASHBOARD_CSS = """
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+     background:#f1f5f9;color:#1e293b;padding:16px}
+h2{font-size:16px;font-weight:700;margin-bottom:14px;
+   display:flex;align-items:center;gap:8px}
+.badge{background:#3b82f6;color:#fff;font-size:11px;
+       padding:2px 8px;border-radius:99px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;
+      padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.name{font-weight:600;font-size:14px;margin-bottom:2px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-size:11px;color:#94a3b8;margin-bottom:10px}
+btn-row{display:flex;gap:6px}
+button{flex:1;padding:7px;border:none;border-radius:8px;cursor:pointer;
+       font-size:13px;font-weight:500;background:#3b82f6;color:#fff;
+       transition:background .15s}
+button:hover{background:#2563eb}
+button:disabled{background:#94a3b8;cursor:not-allowed}
+.empty{padding:32px;text-align:center;color:#94a3b8;font-size:13px}
+.footer{margin-top:12px;font-size:11px;color:#cbd5e1;text-align:center}
+"""
+
+_DASHBOARD_JS = """
+function call(tool, params, btn, label) {
+  if (btn) { btn.textContent = "\u23f3"; btn.disabled = true; }
+  window.parent.postMessage(
+    {type:"tool", payload:{toolName:tool, params:params}}, "*");
+  setTimeout(function(){
+    if (btn) { btn.textContent = label; btn.disabled = false; }
+  }, 3000);
+}
+function doToggle(name, btn) {
+  call("control_device", {device_identifier:name, action:"toggle"}, btn, "Toggle");
+}
+function doOn(name, btn) {
+  call("control_device", {device_identifier:name, action:"on"}, btn, "On");
+}
+function doOff(name, btn) {
+  call("control_device", {device_identifier:name, action:"off"}, btn, "Off");
+}
+"""
+
+
+def _collect_unique_devices() -> list[dict[str, str]]:
+    """Return de-duplicated device info dicts from the in-memory or file cache."""
+    seen: set[str] = set()
+    result: list[dict[str, str]] = []
+    source: dict[str, Any] = _device_cache or {}
+    if not source:
+        try:
+            source = _cache_manager.load() or {}
+        except Exception:
+            source = {}
+    for entry in source.values():
+        try:
+            if hasattr(entry, "host"):
+                # pywemo device object (in-memory)
+                host = str(entry.host)
+                name = str(entry.name)
+                model = str(getattr(entry, "model_name", type(entry).__name__))
+            else:
+                # serialised dict (persistent file cache)
+                host = str(entry.get("host", ""))
+                name = str(entry.get("name", "Unknown"))
+                model = str(entry.get("model_name", entry.get("model", "WeMo")))
+            if host and host not in seen:
+                seen.add(host)
+                result.append({"name": name, "host": host, "model": model})
+        except Exception:  # noqa: S112
+            continue
+    return result
+
+
+def _h(text: str) -> str:
+    """Minimal HTML-escape for untrusted text inserted into HTML."""
+    return (
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    )
+
+
+def _js(text: str) -> str:
+    """Escape text for insertion into a single-quoted JS string literal."""
+    return text.replace("\\", "\\\\").replace("'", "\\'")
+
+
+@mcp.tool()
+async def show_device_dashboard() -> list[UIResource]:  # type: ignore[return]
+    """Show an interactive WeMo device dashboard inline in the host.
+
+    Returns rich HTML showing all cached devices as cards with Toggle / On
+    / Off buttons.  Supported in Claude Desktop, VS Code, ChatGPT, Goose
+    and any other MCP Apps-compatible host (spec: SEP-1865).
+
+    Text-only fallback: use list_devices instead.
+    """
+    devices = _collect_unique_devices()
+
+    if devices:
+        card_parts: list[str] = []
+        for d in devices:
+            nh = _h(d["name"])
+            nj = _js(d["name"])
+            card_parts.append(
+                f'<div class="card">'
+                f'<div class="name" title="{nh}">{nh}</div>'
+                f'<div class="meta">{_h(d["host"])} &middot; {_h(d["model"])}</div>'
+                f"<btn-row>"
+                f"<button onclick=\"doOn('{nj}',this)\">On</button>"
+                f"<button onclick=\"doOff('{nj}',this)\">Off</button>"
+                f"<button onclick=\"doToggle('{nj}',this)\">Toggle</button>"
+                f"</btn-row></div>"
+            )
+        count_badge = f'<span class="badge">{len(devices)}</span>'
+        grid = '<div class="grid">' + "".join(card_parts) + "</div>"
+    else:
+        count_badge = ""
+        grid = (
+            '<p class="empty">No devices cached.'
+            " Ask your assistant to run scan_network first.</p>"
+        )
+
+    html = (
+        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+        f"<style>{_DASHBOARD_CSS}</style></head><body>"
+        f"<h2>WeMo Devices {count_badge}</h2>{grid}"
+        '<div class="footer">wemo-mcp-server &middot; MCP Apps</div>'
+        f"<script>{_DASHBOARD_JS}</script></body></html>"
+    )
+    resource = create_ui_resource(
+        {
+            "uri": "ui://wemo/device-dashboard",
+            "content": {"type": "rawHtml", "htmlString": html},
+            "encoding": "text",
+        }
+    )
+    return [resource]  # type: ignore[return-value]
+
+
+@mcp.tool()
+async def show_device_status_ui(device_identifier: str) -> list[UIResource]:  # type: ignore[return]
+    """Show a device status card with interactive controls.
+
+    Returns rich HTML for a single device showing its name, IP, model, and
+    On / Off / Toggle buttons.  Supported in Claude Desktop, VS Code,
+    ChatGPT, Goose and any other MCP Apps-compatible host.
+
+    Args:
+    ----
+        device_identifier: Device name or IP address.
+
+    Text-only fallback: use get_device_status + control_device instead.
+
+    """
+    # Look up device in cache (same lookup order used by other tools)
+    device: Any = _device_cache.get(device_identifier)
+    if device is None:
+        device = await _reconnect_device_from_cache(device_identifier)
+
+    if device is not None and hasattr(device, "host"):
+        d_name = str(device.name)
+        d_host = str(device.host)
+        d_model = str(getattr(device, "model_name", type(device).__name__))
+    else:
+        # Try persistent cache
+        try:
+            persisted = _cache_manager.load() or {}
+            entry = persisted.get(device_identifier, {})
+        except Exception:
+            entry = {}
+        if entry:
+            d_name = str(entry.get("name", device_identifier))
+            d_host = str(entry.get("host", "?"))
+            d_model = str(entry.get("model_name", entry.get("model", "WeMo Device")))
+        else:
+            d_name = device_identifier
+            d_host = "?"
+            d_model = "Unknown"
+
+    nh = _h(d_name)
+    nj = _js(d_name)
+
+    status_css = """
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+     background:#f1f5f9;color:#1e293b;padding:16px}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;
+      padding:20px;max-width:320px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.title{font-size:17px;font-weight:700;margin-bottom:4px}
+.sub{font-size:12px;color:#94a3b8;margin-bottom:18px}
+.row{display:flex;gap:8px}
+button{flex:1;padding:10px;border:none;border-radius:9px;cursor:pointer;
+       font-size:14px;font-weight:600;color:#fff;transition:background .15s}
+.btn-on{background:#22c55e}.btn-on:hover{background:#16a34a}
+.btn-off{background:#94a3b8}.btn-off:hover{background:#64748b}
+.btn-toggle{background:#3b82f6}.btn-toggle:hover{background:#2563eb}
+button:disabled{opacity:.55;cursor:not-allowed}
+.footer{margin-top:14px;font-size:11px;color:#cbd5e1;text-align:center}
+"""
+
+    status_js = """
+function call(action, btn, label) {
+  btn.disabled = true; btn.textContent = "\u23f3";
+  window.parent.postMessage(
+    {type:"tool",payload:{toolName:"control_device",
+      params:{device_identifier:NAME,action:action}}},"*");
+  setTimeout(function(){ btn.disabled=false; btn.textContent=label; }, 3000);
+}
+""".replace(
+        "NAME", f"'{nj}'"
+    )
+
+    html = (
+        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+        f"<style>{status_css}</style></head><body>"
+        '<div class="card">'
+        f'<div class="title">{nh}</div>'
+        f'<div class="sub">{_h(d_host)} &middot; {_h(d_model)}</div>'
+        '<div class="row">'
+        "<button class=\"btn-on\" onclick=\"call('on',this,'On')\">On</button>"
+        "<button class=\"btn-off\" onclick=\"call('off',this,'Off')\">Off</button>"
+        "<button class=\"btn-toggle\" onclick=\"call('toggle',this,'Toggle')\">Toggle</button>"
+        "</div></div>"
+        '<div class="footer">wemo-mcp-server &middot; MCP Apps</div>'
+        f"<script>{status_js}</script></body></html>"
+    )
+    resource = create_ui_resource(
+        {
+            "uri": "ui://wemo/device-status",
+            "content": {"type": "rawHtml", "htmlString": html},
+            "encoding": "text",
+        }
+    )
+    return [resource]  # type: ignore[return-value]
 
 
 def main() -> None:
