@@ -1782,9 +1782,7 @@ function call(action, btn, label) {
       params:{device_identifier:NAME,action:action}}},"*");
   setTimeout(function(){ btn.disabled=false; btn.textContent=label; }, 3000);
 }
-""".replace(
-        "NAME", f"'{nj}'"
-    )
+""".replace("NAME", f"'{nj}'")
 
     html = (
         '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
