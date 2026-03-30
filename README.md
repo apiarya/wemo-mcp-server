@@ -78,6 +78,10 @@ Seamlessly integrate WeMo smart home devices with AI assistants through the Mode
 
 ---
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/apiarya-wemo-mcp-server).
+
 ## Prerequisites
 
 All configurations use `uvx` (from the `uv` Python package manager) to run the server. Install [uv](https://docs.astral.sh/uv/) first:
